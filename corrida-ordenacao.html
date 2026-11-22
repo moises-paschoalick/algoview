@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corrida de Ordenação</title>
+  <style>
+    :root {
+      --bg: #07080d;
+      --stage: #0f1117;
+      --panel: #141824;
+      --line: #1e2130;
+      --line-2: #2d3148;
+      --text: #e2e8f0;
+      --strong: #f8fafc;
+      --muted: #64748b;
+      --dim: #334155;
+      --accent: #6366f1;
+      --cmp: #f59e0b;
+      --swap: #ef4444;
+      --min: #e879f9;
+      --sorted: #22c55e;
+
+      --c-bub: #60a5fa;
+      --c-sel: #a78bfa;
+      --c-ins: #f472b6;
+      --c-mrg: #34d399;
+
+      --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* ── Toolbar (fora do palco — não aparece na gravação) ── */
+    .toolbar {
+      display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 12px; background: #10131c; border-bottom: 1px solid var(--line); font-size: 13px;
+    }
+    body.clean .toolbar { display: none; }
+    .toolbar .sep { width: 1px; height: 20px; background: var(--line); }
+    .toolbar label { color: var(--muted); }
+    .toolbar select {
+      padding: 4px 6px; background: #1a1f2e; border: 1px solid var(--line-2); border-radius: 6px;
+      color: var(--strong); font-size: 13px; outline: none;
+    }
+    .toolbar input[type=range] { width: 80px; accent-color: var(--accent); }
+    .btn {
+      padding: 5px 10px; border: 1px solid var(--line-2); border-radius: 6px; cursor: pointer;
+      background: var(--line); color: #94a3b8; font-size: 12.5px; font-weight: 600;
+    }
+    .btn:hover:not(:disabled) { background: #252840; color: var(--strong); }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.rec { background: #7f1d1d; border-color: #b91c1c; color: #fecaca; }
+    .btn.chip.active { border-color: var(--accent); color: var(--strong); }
+    .hint { color: var(--dim); font-size: 11.5px; }
+
+    /* ── Palco 1080×1350 (4:5 — feed do LinkedIn) ── */
+    .viewport { flex: 1; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; position: relative; }
+    .stage-holder { position: relative; flex: none; }
+    #stage {
+      position: absolute; top: 0; left: 0;
+      width: 1080px; height: 1350px; transform-origin: top left;
+      background:
+        radial-gradient(900px 500px at 85% -5%, rgba(99,102,241,.16), transparent 60%),
+        radial-gradient(700px 500px at -10% 105%, rgba(52,211,153,.10), transparent 60%),
+        var(--stage);
+      overflow: hidden; display: flex; flex-direction: column;
+      padding: 40px 48px 30px;
+    }
+
+    .s-head { margin-bottom: 18px; }
+    .s-kicker { font-size: 20px; color: var(--accent); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .s-title { font-size: 54px; font-weight: 800; color: var(--strong); letter-spacing: -.02em; line-height: 1.05; margin-top: 6px; }
+    .s-sub { margin-top: 12px; font-size: 24px; color: #94a3b8; display: flex; gap: 22px; align-items: baseline; }
+    .s-sub b { color: var(--strong); }
+    .s-sub .kind { color: var(--cmp); }
+    .s-sub .tick { margin-left: auto; font-family: var(--mono); font-size: 22px; color: var(--muted); }
+    .s-sub .tick b { font-size: 26px; font-variant-numeric: tabular-nums; }
+
+    .lanes { display: flex; flex-direction: column; gap: 12px; }
+    .lane {
+      background: var(--panel); border: 1px solid var(--line);
+      border-left: 6px solid var(--lane-color); border-radius: 14px;
+      padding: 10px 22px 10px; transition: box-shadow .3s;
+    }
+    .lane.done { box-shadow: 0 0 0 2px color-mix(in srgb, var(--sorted) 55%, transparent), 0 0 40px -10px var(--sorted); }
+
+    .lane-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; }
+    .lane-title { font-size: 25px; font-weight: 700; color: var(--lane-color); }
+    .lane-bigo { font-family: var(--mono); font-size: 16px; color: var(--muted); border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 8px; }
+    .lane-badge {
+      font-size: 16px; font-weight: 700; padding: 2px 10px; border-radius: 99px;
+      background: color-mix(in srgb, var(--sorted) 22%, transparent); color: var(--sorted);
+      opacity: 0; transform: scale(.7); transition: all .3s;
+    }
+    .lane-badge.show { opacity: 1; transform: scale(1); }
+    .lane-count { margin-left: auto; font-size: 18px; color: var(--muted); display: flex; gap: 16px; align-items: baseline; }
+    .lane-count b { font-size: 32px; color: var(--strong); font-variant-numeric: tabular-nums; font-family: var(--mono); }
+    .lane-count .mov b { font-size: 22px; color: #94a3b8; }
+
+    .bars { display: flex; gap: var(--gap, 8px); align-items: flex-end; height: 104px; position: relative; }
+    .bar-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+    .bar {
+      width: 100%; border-radius: 6px 6px 3px 3px;
+      background: #2a3047; border: 2px solid #343b57;
+      display: flex; align-items: flex-start; justify-content: center;
+      font-family: var(--mono); font-weight: 700; font-size: var(--bar-font, 17px); color: var(--text);
+      padding-top: 2px;
+      transition: height .22s ease, background .2s, border-color .2s, opacity .25s, transform .2s;
+    }
+    .bar.out    { opacity: .28; }
+    .bar.part   { border-color: color-mix(in srgb, var(--lane-color) 60%, #343b57); }
+    .bar.cmp    { background: color-mix(in srgb, var(--cmp) 40%, #2a3047); border-color: var(--cmp); color: #fff; transform: translateY(-4px); }
+    .bar.swap   { background: color-mix(in srgb, var(--swap) 45%, #2a3047); border-color: var(--swap); color: #fff; transform: translateY(-4px); }
+    .bar.min    { background: color-mix(in srgb, var(--min) 40%, #2a3047); border-color: var(--min); color: #fff; }
+    .bar.key    { background: color-mix(in srgb, var(--lane-color) 55%, #2a3047); border-color: var(--lane-color); color: #fff; transform: translateY(-8px); }
+    .bar.write  { background: color-mix(in srgb, var(--lane-color) 55%, #2a3047); border-color: var(--lane-color); color: #fff; transform: translateY(-4px); }
+    .bar.sorted { background: color-mix(in srgb, var(--sorted) 30%, #1a1f2e); border-color: color-mix(in srgb, var(--sorted) 70%, transparent); }
+
+    .lane-code {
+      margin-top: 8px; font-family: var(--mono); font-size: 17px; color: #94a3b8;
+      background: #0b0d14; border-radius: 8px; padding: 6px 12px;
+      border-left: 3px solid var(--lane-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-height: 33px;
+    }
+    .lane-code .kw { color: #c084fc; } .lane-code .num { color: #fbbf24; }
+    .lane-code.flash { animation: flash .3s ease; }
+    @keyframes flash { from { background: color-mix(in srgb, var(--lane-color) 22%, #0b0d14); } to { background: #0b0d14; } }
+
+    /* legenda */
+    .legend { display: flex; gap: 22px; justify-content: center; margin-top: 14px; font-size: 16px; color: var(--muted); }
+    .legend span { display: inline-flex; align-items: center; gap: 7px; }
+    .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+    /* placar */
+    .board { margin-top: auto; padding-top: 10px; }
+    .board-title { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 10px; font-weight: 600; }
+    .bar-row { display: grid; grid-template-columns: 200px 1fr 64px; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .bar-name { font-size: 19px; font-weight: 600; color: var(--bar-color); }
+    .bar-track { height: 14px; background: #1a1f2e; border-radius: 5px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0; background: var(--bar-color); border-radius: 5px; transition: width .2s ease; }
+    .bar-val { font-family: var(--mono); font-size: 24px; font-weight: 700; text-align: right; color: var(--strong); font-variant-numeric: tabular-nums; }
+    .s-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 16px; color: var(--dim); }
+
+    /* overlays */
+    .overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 80px; gap: 26px;
+      background: rgba(7, 8, 13, .95);
+      opacity: 0; pointer-events: none; transition: opacity .5s ease;
+    }
+    .overlay.show { opacity: 1; }
+    .ov-kicker { font-size: 26px; color: var(--accent); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .ov-big { font-size: 84px; font-weight: 800; color: var(--strong); line-height: 1.05; letter-spacing: -.02em; }
+    .ov-mid { font-size: 32px; color: #cbd5e1; line-height: 1.35; }
+    .ov-mid b { color: var(--strong); }
+    .ov-vs { display: flex; gap: 36px; margin-top: 10px; }
+    .ov-vs > div { background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px; padding: 26px 30px; min-width: 400px; }
+    .ov-vs .lbl { font-size: 24px; font-weight: 700; }
+    .ov-vs .val { font-family: var(--mono); font-size: 60px; font-weight: 800; color: var(--strong); margin-top: 6px; }
+    .ov-vs .cap { font-size: 20px; color: var(--muted); margin-top: 4px; }
+
+    .banner {
+      position: absolute; left: 48px; right: 48px; top: 96px;
+      background: rgba(20, 24, 36, .96); border: 1px solid var(--line-2); border-radius: 16px;
+      padding: 16px 26px; font-size: 26px; color: #cbd5e1; text-align: center;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,.7);
+      opacity: 0; transform: translateY(14px); transition: all .4s ease; pointer-events: none; z-index: 3;
+    }
+    .banner.show { opacity: 1; transform: none; }
+    .banner b { color: var(--strong); }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <label>n</label>
+  <select id="sizeSel"><option>8</option><option selected>12</option><option>16</option></select>
+  <span class="sep"></span>
+  <label>entrada</label>
+  <button class="btn chip" data-kind="random">aleatória</button>
+  <button class="btn chip" data-kind="nearly">quase ordenada</button>
+  <button class="btn chip" data-kind="reversed">invertida</button>
+  <button class="btn chip" data-kind="sorted">ordenada</button>
+  <button class="btn" id="newArrayBtn" title="Gerar outra entrada do mesmo tipo">⟳</button>
+  <span class="sep"></span>
+  <button class="btn primary" id="playBtn">▶ Play</button>
+  <button class="btn" id="stepBtn">⏭ Passo</button>
+  <button class="btn" id="resetBtn">↺ Reset</button>
+  <label>vel.</label>
+  <input type="range" id="speed" min="1" max="10" value="7" />
+  <span class="sep"></span>
+  <button class="btn rec" id="scriptBtn">🎬 Roteiro (~40s)</button>
+  <button class="btn" id="scaleBtn">Escala: ajustar</button>
+  <button class="btn" id="cleanBtn">Ocultar barra (H)</button>
+  <span class="hint">Espaço play · → passo · R reset · S roteiro · H barra · Esc para</span>
+</div>
+
+<div class="viewport" id="viewport">
+  <div class="stage-holder" id="holder">
+    <div id="stage">
+      <div class="s-head">
+        <div class="s-kicker">Algoritmos · Ordenação</div>
+        <div class="s-title">Corrida de Ordenação</div>
+        <div class="s-sub">
+          <span>entrada <b class="kind" id="kindShow">–</b></span>
+          <span><b id="nShow">–</b> elementos</span>
+          <span class="tick">passo <b id="tickNum">0</b></span>
+        </div>
+      </div>
+
+      <div class="lanes" id="lanes"></div>
+
+      <div class="legend">
+        <span><i style="background:var(--cmp)"></i>comparando</span>
+        <span><i style="background:var(--swap)"></i>troca</span>
+        <span><i style="background:var(--min)"></i>mínimo</span>
+        <span><i style="background:var(--sorted)"></i>posição final</span>
+      </div>
+
+      <div class="board">
+        <div class="board-title">Comparações</div>
+        <div id="boardBars"></div>
+        <div class="s-foot"><span>1 passo = 1 comparação em todos</span><span>JavaScript</span></div>
+      </div>
+
+      <div class="banner" id="banner"></div>
+      <div class="overlay" id="overlay"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// Geradores de passos. Cada passo = 1 comparação.
+// Um passo guarda: snapshot do array (a), destaques por índice (hl),
+// índices já na posição final (fin), faixa ativa (range), contadores e código.
+// ─────────────────────────────────────────────
+const K = (s) => s
+  .replace(/\b(const|let|for|if|else|return|while)\b/g, '<span class="kw">$1</span>')
+  .replace(/(?<![\w.])(-?\d+)\b/g, '<span class="num">$1</span>');
+
+const range = (a, b) => Array.from({ length: Math.max(0, b - a + 1) }, (_, i) => a + i);
+
+function bubbleSteps(a0) {
+  const a = a0.slice(), N = a.length, s = [];
+  let c = 0, m = 0;
+  for (let i = 0; i < N; i++) {
+    let swapped = false;
+    for (let j = 0; j < N - 1 - i; j++) {
+      c++;
+      const x = a[j], y = a[j + 1];
+      let hl, code;
+      if (x > y) {
+        [a[j], a[j + 1]] = [a[j + 1], a[j]]; m++; swapped = true;
+        hl = { [j]: 'swap', [j + 1]: 'swap' };
+        code = `if (${x} > ${y}) swap(j, j + 1)  // troca`;
+      } else {
+        hl = { [j]: 'cmp', [j + 1]: 'cmp' };
+        code = `if (${x} > ${y})  // não, mantém`;
+      }
+      s.push({ a: a.slice(), hl, fin: range(N - i, N - 1), cmp: c, mov: m, code });
+    }
+    if (!swapped) {
+      if (s.length) s[s.length - 1].code += '  · sem trocas → break';
+      break;
+    }
+  }
+  return s;
+}
+
+function selectionSteps(a0) {
+  const a = a0.slice(), N = a.length, s = [];
+  let c = 0, m = 0;
+  for (let i = 0; i < N - 1; i++) {
+    let min = i;
+    for (let j = i + 1; j < N; j++) {
+      c++;
+      const prev = a[min];
+      let code;
+      if (a[j] < a[min]) { min = j; code = `if (${a[j]} < ${prev}) minIndex = ${j}  // novo mínimo`; }
+      else code = `if (${a[j]} < ${prev})  // não`;
+      let hl = { [j]: 'cmp', [min]: 'min' };
+      let fin = range(0, i - 1);
+      if (j === N - 1) {                       // fim da passada → troca
+        if (min !== i) {
+          [a[i], a[min]] = [a[min], a[i]]; m++;
+          hl = { [i]: 'swap', [min]: 'swap' };
+          code += `  · swap(${i}, ${min})`;
+        }
+        fin = range(0, i);
+      }
+      s.push({ a: a.slice(), hl, fin, cmp: c, mov: m, code });
+    }
+  }
+  return s;
+}
+
+function insertionSteps(a0) {
+  const a = a0.slice(), N = a.length, s = [];
+  let c = 0, m = 0;
+  for (let i = 1; i < N; i++) {
+    const key = a[i];
+    let j = i - 1;
+    while (j >= 0) {
+      c++;
+      if (a[j] > key) {
+        const big = a[j];
+        a[j + 1] = a[j]; a[j] = key; m++;       // desloca (o key "anda" para a esquerda)
+        s.push({ a: a.slice(), hl: { [j]: 'key', [j + 1]: 'swap' }, part: [0, i], cmp: c, mov: m,
+                 code: `while (${big} > key=${key})  nums[${j + 1}] = ${big}  // desloca` });
+        j--;
+      } else {
+        s.push({ a: a.slice(), hl: { [j]: 'cmp', [j + 1]: 'key' }, part: [0, i], cmp: c, mov: m,
+                 code: `while (${a[j]} > key=${key})  // não → nums[${j + 1}] = ${key}` });
+        break;
+      }
+    }
+  }
+  return s;
+}
+
+function mergeSteps(a0) {
+  const a = a0.slice(), s = [];
+  let c = 0, m = 0;
+  const ms = (lo, hi) => {
+    if (lo >= hi) return;
+    const mid = Math.floor((lo + hi) / 2);
+    ms(lo, mid);
+    ms(mid + 1, hi);
+    const L = a.slice(lo, mid + 1), R = a.slice(mid + 1, hi + 1), out = [];
+    let i = 0, j = 0;
+    while (i < L.length && j < R.length) {
+      c++;
+      const x = L[i], y = R[j];
+      const takeLeft = x <= y;
+      out.push(takeLeft ? L[i++] : R[j++]); m++;
+      const rest = [...out, ...L.slice(i), ...R.slice(j)];
+      for (let k = 0; k < rest.length; k++) a[lo + k] = rest[k];
+      const k = lo + out.length - 1;
+      const other = takeLeft ? lo + out.length + (L.length - i) : lo + out.length;
+      const hl = { [k]: 'write' };
+      if (other <= hi) hl[other] = 'cmp';
+      s.push({ a: a.slice(), hl, range: [lo, hi], cmp: c, mov: m,
+               code: `merge([${lo}..${mid}], [${mid + 1}..${hi}]): ${x} ${takeLeft ? '<=' : '>'} ${y} → ${takeLeft ? x : y}` });
+    }
+    const leftover = (L.length - i) + (R.length - j);
+    if (leftover) { m += leftover; const last = s[s.length - 1]; last.mov = m; last.code += '  · copia o resto'; }
+  };
+  ms(0, a.length - 1);
+  return s;
+}
+
+const LANES = [
+  { id: 'bub', name: 'Bubble Sort',    color: 'var(--c-bub)', bigo: 'O(n²)',      steps: bubbleSteps },
+  { id: 'sel', name: 'Selection Sort', color: 'var(--c-sel)', bigo: 'O(n²)',      steps: selectionSteps },
+  { id: 'ins', name: 'Insertion Sort', color: 'var(--c-ins)', bigo: 'O(n²)',      steps: insertionSteps },
+  { id: 'mrg', name: 'Merge Sort',     color: 'var(--c-mrg)', bigo: 'O(n log n)', steps: mergeSteps },
+];
+
+// ─────────────────────────────────────────────
+// Entradas
+// ─────────────────────────────────────────────
+const KINDS = { random: 'aleatória', nearly: 'quase ordenada', reversed: 'invertida', sorted: 'já ordenada' };
+
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+function makeInput(kind, n) {
+  const set = new Set();
+  while (set.size < n) set.add(3 + Math.floor(Math.random() * 96));
+  const a = [...set].sort((x, y) => x - y);
+  if (kind === 'random') return shuffle(a);
+  if (kind === 'reversed') return a.reverse();
+  if (kind === 'nearly') {
+    for (let t = 0; t < Math.max(1, Math.floor(n / 6)); t++) {
+      const i = 1 + Math.floor(Math.random() * (n - 2));
+      [a[i], a[i + 1]] = [a[i + 1], a[i]];
+    }
+  }
+  return a;
+}
+
+// ─────────────────────────────────────────────
+// Estado + render
+// ─────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+let input = [], kind = 'random', tick = 0, timer = null, steps = {};
+
+function buildLanes() {
+  const n = input.length;
+  const dims = n <= 8 ? { f: '20px', g: '12px' } : n <= 12 ? { f: '17px', g: '8px' } : { f: '14px', g: '6px' };
+  $('lanes').innerHTML = LANES.map((l) => `
+    <section class="lane" id="lane-${l.id}" style="--lane-color:${l.color};--bar-font:${dims.f};--gap:${dims.g}">
+      <div class="lane-head">
+        <span class="lane-title">${l.name}</span>
+        <span class="lane-bigo">${l.bigo}</span>
+        <span class="lane-badge" id="badge-${l.id}">✓ ordenado</span>
+        <span class="lane-count"><span><b id="cnt-${l.id}">0</b> comp.</span><span class="mov"><b id="mov-${l.id}">0</b> mov.</span></span>
+      </div>
+      <div class="bars">${input.map((_, i) => `<div class="bar-col"><div class="bar" id="b-${l.id}-${i}"></div></div>`).join('')}</div>
+      <div class="lane-code" id="code-${l.id}">&nbsp;</div>
+    </section>`).join('');
+
+  $('boardBars').innerHTML = LANES.map((l) => `
+    <div class="bar-row" style="--bar-color:${l.color}">
+      <span class="bar-name">${l.name.replace(' Sort', '')}</span>
+      <div class="bar-track"><div class="bar-fill" id="bf-${l.id}"></div></div>
+      <span class="bar-val" id="bv-${l.id}">0</span>
+    </div>`).join('');
+}
+
+const maxTicks = () => Math.max(0, ...LANES.map((l) => (steps[l.id] || []).length));
+const maxV = () => Math.max(...input);
+
+function renderLane(l, idx) {
+  const list = steps[l.id], n = input.length;
+  const finished = idx >= list.length - 1 && idx >= 0 || list.length === 0 && idx >= 0;
+  const st = idx < 0 || list.length === 0 ? null : list[Math.min(idx, list.length - 1)];
+  const fresh = idx >= 0 && idx < list.length;
+  const a = st ? st.a : input;
+  const fin = new Set(st && st.fin ? st.fin : []);
+  const mv = maxV();
+
+  for (let i = 0; i < n; i++) {
+    const b = $(`b-${l.id}-${i}`);
+    b.style.height = `${22 + (a[i] / mv) * 78}%`;
+    b.textContent = a[i];
+    let cls = 'bar';
+    if (finished) cls += ' sorted';
+    else if (st) {
+      if (st.range && (i < st.range[0] || i > st.range[1])) cls += ' out';
+      if (st.part && i >= st.part[0] && i <= st.part[1]) cls += ' part';
+      if (fin.has(i)) cls += ' sorted';
+      if (st.hl[i]) cls += ' ' + st.hl[i];
+    }
+    b.className = cls;
+  }
+
+  const code = $(`code-${l.id}`);
+  code.innerHTML = st ? K(st.code) : '&nbsp;';
+  if (fresh) { code.classList.remove('flash'); void code.offsetWidth; code.classList.add('flash'); }
+
+  const cmp = st ? st.cmp : 0;
+  $(`cnt-${l.id}`).textContent = cmp;
+  $(`mov-${l.id}`).textContent = st ? st.mov : 0;
+  $(`bv-${l.id}`).textContent = cmp;
+  $(`bf-${l.id}`).style.width = `${(cmp / (n * (n - 1) / 2)) * 100}%`;
+  $(`lane-${l.id}`).classList.toggle('done', finished);
+  $(`badge-${l.id}`).classList.toggle('show', finished);
+}
+
+function render() {
+  LANES.forEach((l) => renderLane(l, tick - 1));
+  $('tickNum').textContent = tick;
+  updateButtons();
+}
+
+function updateButtons() {
+  const end = tick >= maxTicks();
+  $('stepBtn').disabled = end;
+  $('playBtn').textContent = timer ? '⏸ Pausar' : end ? '✓ Fim' : '▶ Play';
+  $('playBtn').disabled = end && !timer;
+}
+
+// ─────────────────────────────────────────────
+// Controle manual
+// ─────────────────────────────────────────────
+function load(arr, k) {
+  pause();
+  input = arr.slice(); kind = k; tick = 0;
+  steps = {};
+  LANES.forEach((l) => { steps[l.id] = l.steps(input); });
+  document.querySelectorAll('[data-kind]').forEach((b) => b.classList.toggle('active', b.dataset.kind === k));
+  $('kindShow').textContent = KINDS[k];
+  $('nShow').textContent = input.length;
+  buildLanes();
+  render();
+}
+
+function newInput(k = kind) { load(makeInput(k, Number($('sizeSel').value)), k); }
+function reset() { load(input, kind); }
+
+function step() { if (tick < maxTicks()) { tick++; render(); } }
+const delay = () => 1000 - Number($('speed').value) * 92;
+
+function play() {
+  if (tick >= maxTicks()) return;
+  const loop = () => { step(); if (tick >= maxTicks()) return pause(); timer = setTimeout(loop, delay()); };
+  timer = setTimeout(loop, 120);
+  updateButtons();
+}
+function pause() { clearTimeout(timer); timer = null; updateButtons(); }
+
+// ─────────────────────────────────────────────
+// Roteiro (~40s): gancho → aleatória → quase ordenada → fechamento
+// ─────────────────────────────────────────────
+const DEMO_RANDOM = [38, 23, 8, 64, 16, 29, 51, 13, 72, 45, 5, 57];
+const DEMO_NEARLY = [5, 8, 13, 23, 16, 29, 38, 45, 51, 57, 72, 64];
+
+let runId = 0;
+const sleep = (ms, id) => new Promise((res, rej) => setTimeout(() => (id === runId ? res() : rej('cancel')), ms));
+function overlay(html) { const o = $('overlay'); if (html) { o.innerHTML = html; o.classList.add('show'); } else o.classList.remove('show'); }
+function banner(html) { const b = $('banner'); if (html) { b.innerHTML = html; b.classList.add('show'); } else b.classList.remove('show'); }
+const total = (lid) => { const l = steps[lid]; return l.length ? l[l.length - 1].cmp : 0; };
+const C = (lid) => `<b style="color:var(--c-${lid})">${total(lid)}</b>`;
+
+async function race(arr, k, id, ms) {
+  load(arr, k);
+  await sleep(600, id);
+  while (tick < maxTicks()) { step(); await sleep(ms, id); }
+}
+
+async function runScript() {
+  const id = ++runId;
+  pause();
+  try {
+    $('sizeSel').value = '12';
+    load(DEMO_RANDOM, 'random');
+
+    overlay(`<div class="ov-kicker">Algoritmos · Ordenação</div>
+             <div class="ov-big">Qual ordenação<br>termina primeiro?</div>
+             <div class="ov-mid">Bubble · Selection · Insertion · Merge<br><b>1 comparação por passo</b></div>`);
+    await sleep(3200, id);
+    overlay(null);
+    await sleep(500, id);
+
+    banner(`Corrida 1 · entrada <b>aleatória</b>`);
+    await sleep(1300, id); banner(null);
+    await race(DEMO_RANDOM, 'random', id, 165);
+    banner(`Merge: ${C('mrg')} comparações · Selection: ${C('sel')} · Bubble: ${C('bub')}`);
+    await sleep(2600, id); banner(null);
+    await sleep(300, id);
+
+    banner(`Corrida 2 · entrada <b>quase ordenada</b>`);
+    await sleep(1300, id); banner(null);
+    await race(DEMO_NEARLY, 'nearly', id, 140);
+    banner(`Quase ordenada: Insertion faz só ${C('ins')} · Selection continua em ${C('sel')}`);
+    await sleep(3000, id); banner(null);
+
+    overlay(`<div class="ov-kicker">E com</div>
+             <div class="ov-big">1.000.000 de itens?</div>
+             <div class="ov-vs">
+               <div><div class="lbl" style="color:var(--c-sel)">Bubble/Selection · O(n²)</div><div class="val">~500 bi</div><div class="cap">comparações</div></div>
+               <div><div class="lbl" style="color:var(--c-mrg)">Merge · O(n log n)</div><div class="val">~20 mi</div><div class="cap">comparações</div></div>
+             </div>
+             <div class="ov-mid">Insertion brilha em listas <b>pequenas</b> ou <b>quase ordenadas</b>.</div>`);
+    await sleep(4800, id);
+  } catch (e) {
+    if (e !== 'cancel') throw e;
+  }
+}
+
+function stopScript() { runId++; overlay(null); banner(null); pause(); }
+
+// ─────────────────────────────────────────────
+// Escala do palco
+// ─────────────────────────────────────────────
+let fit = true;
+function layout() {
+  const vp = $('viewport').getBoundingClientRect();
+  const s = fit ? Math.min((vp.width - 24) / 1080, (vp.height - 24) / 1350) : 1;
+  $('stage').style.transform = `scale(${s})`;
+  $('holder').style.width = `${1080 * s}px`;
+  $('holder').style.height = `${1350 * s}px`;
+  $('scaleBtn').textContent = fit ? 'Escala: ajustar' : 'Escala: 1:1';
+}
+window.addEventListener('resize', layout);
+
+// ─────────────────────────────────────────────
+// Eventos
+// ─────────────────────────────────────────────
+$('playBtn').onclick = () => (timer ? pause() : play());
+$('stepBtn').onclick = () => { pause(); step(); };
+$('resetBtn').onclick = () => { stopScript(); reset(); };
+$('newArrayBtn').onclick = () => { stopScript(); newInput(); };
+$('sizeSel').onchange = () => { stopScript(); newInput(); };
+document.querySelectorAll('[data-kind]').forEach((b) => (b.onclick = () => { stopScript(); newInput(b.dataset.kind); }));
+$('scriptBtn').onclick = runScript;
+$('scaleBtn').onclick = () => { fit = !fit; layout(); };
+$('cleanBtn').onclick = () => { document.body.classList.toggle('clean'); layout(); };
+
+document.addEventListener('keydown', (e) => {
+  if (['INPUT', 'SELECT'].includes(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); timer ? pause() : play(); }
+  else if (e.code === 'ArrowRight') { pause(); step(); }
+  else if (e.key === 'r' || e.key === 'R') { stopScript(); reset(); }
+  else if (e.key === 's' || e.key === 'S') runScript();
+  else if (e.key === 'h' || e.key === 'H') { document.body.classList.toggle('clean'); layout(); }
+  else if (e.key === 'Escape') stopScript();
+});
+
+// Parâmetros opcionais: ?demo=random|nearly · tick=N · scale=1 · clean=1 · script=1
+load(DEMO_RANDOM, 'random');
+(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('demo') === 'nearly') load(DEMO_NEARLY, 'nearly');
+  if (q.has('tick')) { tick = Math.min(Number(q.get('tick')), maxTicks()); render(); }
+  if (q.get('scale') === '1') fit = false;
+  if (q.get('clean') === '1') document.body.classList.add('clean');
+  if (q.get('script') === '1') setTimeout(runScript, 300);
+})();
+layout();
+</script>
+</body>
+</html>

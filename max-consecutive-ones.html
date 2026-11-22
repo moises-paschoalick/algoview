@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Max Consecutive Ones — Visualizador</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 16px 16px 10px;
+      border-bottom: 1px solid #1a1f2e;
+      flex-shrink: 0;
+    }
+    header h1 { font-size: 1.25rem; color: #f8fafc; letter-spacing: -0.02em; }
+    header p  { color: #475569; font-size: 0.78rem; margin-top: 3px; }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 16px;
+      background: #0c0f18;
+      border-bottom: 1px solid #1a1f2e;
+      flex-wrap: wrap;
+      flex-shrink: 0;
+    }
+    .divider { width: 1px; height: 22px; background: #1a1f2e; }
+
+    .presets {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+    }
+    .presets label { color: #475569; font-size: 0.75rem; margin-right: 2px; }
+
+    .btn {
+      padding: 5px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .btn-play    { background: #6366f1; color: #fff; }
+    .btn-play:hover:not(:disabled) { background: #4f46e5; }
+    .btn-step    { background: #1a1f2e; color: #94a3b8; border: 1px solid #252840; }
+    .btn-step:hover:not(:disabled) { background: #1e2438; }
+    .btn-reset   { background: #1a1f2e; color: #94a3b8; border: 1px solid #252840; }
+    .btn-reset:hover:not(:disabled) { background: #1e2438; }
+    .btn-preset  { background: #111622; color: #64748b; border: 1px solid #1e2438; font-family: monospace; font-size: 0.72rem; }
+    .btn-preset:hover { background: #1a2235; color: #94a3b8; border-color: #2d3555; }
+    .btn-preset.active { background: #1e2a45; color: #60a5fa; border-color: #2d4a7a; }
+    .btn-rand    { background: #0f2a1e; color: #34d399; border: 1px solid #1a4a33; }
+    .btn-rand:hover { background: #143520; }
+
+    .speed-wrap { display: flex; align-items: center; gap: 6px; }
+    .speed-wrap label { color: #475569; font-size: 0.75rem; }
+    input[type="range"] { width: 80px; accent-color: #6366f1; cursor: pointer; }
+
+    /* ── Main ── */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Viz panel ── */
+    .viz-panel {
+      padding: 18px 22px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-right: 1px solid #1a1f2e;
+      overflow-y: auto;
+      gap: 14px;
+    }
+    .viz-panel::-webkit-scrollbar { width: 4px; }
+    .viz-panel::-webkit-scrollbar-thumb { background: #1e2438; border-radius: 2px; }
+
+    .panel-label {
+      align-self: flex-start;
+      font-size: 0.62rem;
+      color: #2d3a52;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    /* ── Array section ── */
+    .array-section {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .array-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      flex-wrap: nowrap;
+    }
+
+    .cell {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      border: 2px solid #1e2438;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      font-weight: 900;
+      position: relative;
+      transition: background 0.28s ease, border-color 0.28s ease,
+                  color 0.28s ease, opacity 0.28s ease,
+                  transform 0.28s ease, box-shadow 0.28s ease;
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .cell .cell-idx {
+      position: absolute;
+      top: -16px;
+      font-size: 0.58rem;
+      font-weight: 400;
+      color: #2d3a52;
+    }
+
+    /* Cell value states */
+    .c-zero-unvisited  { background: #111620; color: #1e2d40; border-color: #161c28; }
+    .c-one-unvisited   { background: #111d30; color: #2d4a6e; border-color: #1a2a40; }
+
+    .c-zero-visited    { background: #0d1018; color: #1a2535; border-color: #111520; opacity: 0.55; }
+    .c-one-visited     { background: #121828; color: #2a3f60; border-color: #182235; opacity: 0.7; }
+
+    .c-streak          { background: #1e1b4b; color: #818cf8; border-color: #4338ca;
+                         box-shadow: 0 0 14px rgba(99,102,241,0.35); }
+    .c-max             { background: #052e16; color: #4ade80; border-color: #16a34a;
+                         box-shadow: 0 0 14px rgba(34,197,94,0.4); }
+    .c-max-final       { background: #042a14; color: #22c55e; border-color: #15803d;
+                         box-shadow: 0 0 22px rgba(34,197,94,0.6);
+                         transform: scale(1.08);
+                         animation: pop-max 0.5s cubic-bezier(.36,.07,.19,.97); }
+
+    @keyframes pop-max {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.15); }
+      75%  { transform: scale(1.04); }
+      100% { transform: scale(1.08); }
+    }
+
+    /* Current cell overlay */
+    .c-current::after {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 9px;
+      border: 2px solid #f59e0b;
+      box-shadow: 0 0 12px rgba(245,158,11,0.5), inset 0 0 8px rgba(245,158,11,0.08);
+      pointer-events: none;
+    }
+
+    /* ── Pointer row ── */
+    .ptr-row {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+      min-height: 20px;
+    }
+    .ptr-slot {
+      width: 48px;
+      display: flex;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .ptr-tag {
+      font-size: 0.6rem;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 4px;
+      line-height: 1.3;
+    }
+    .ptr-i { background: rgba(245,158,11,0.2); color: #fbbf24; }
+
+    /* ── Streak bars ── */
+    .streak-bars {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .bar-label {
+      font-size: 0.7rem;
+      color: #475569;
+      width: 90px;
+      flex-shrink: 0;
+      text-align: right;
+    }
+    .bar-track {
+      flex: 1;
+      height: 10px;
+      background: #111620;
+      border-radius: 5px;
+      border: 1px solid #1e2438;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 5px;
+      transition: width 0.35s ease;
+      min-width: 0;
+    }
+    .bar-fill-streak { background: linear-gradient(90deg, #4338ca, #818cf8); }
+    .bar-fill-max    { background: linear-gradient(90deg, #16a34a, #4ade80); }
+    .bar-count {
+      font-size: 0.85rem;
+      font-weight: 700;
+      width: 26px;
+      flex-shrink: 0;
+    }
+    .bar-count-streak { color: #818cf8; }
+    .bar-count-max    { color: #4ade80; }
+
+    /* ── Vars strip ── */
+    .vars-strip {
+      display: flex;
+      gap: 8px;
+      width: 100%;
+    }
+    .var-chip {
+      flex: 1;
+      background: #0c0f18;
+      border: 1px solid #1a1f2e;
+      border-radius: 8px;
+      padding: 9px 8px;
+      text-align: center;
+    }
+    .var-chip .vn { font-size: 0.6rem; color: #2d3a52; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+    .var-chip .vv { font-size: 1.1rem; font-weight: 700; }
+    .chip-count .vv { color: #818cf8; }
+    .chip-max   .vv { color: #4ade80; }
+    .chip-idx   .vv { color: #fbbf24; }
+
+    /* ── Status box ── */
+    .status-box {
+      width: 100%;
+      background: #0c0f18;
+      border: 1px solid #1a1f2e;
+      border-radius: 9px;
+      padding: 12px 14px;
+      min-height: 54px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .status-label { font-size: 0.6rem; color: #2d3a52; text-transform: uppercase; letter-spacing: 0.08em; }
+    .status-msg   { font-size: 0.85rem; color: #e2e8f0; line-height: 1.4; }
+
+    /* ── Result overlay ── */
+    .result-box {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: none;
+    }
+    .result-box.show {
+      display: block;
+      background: #042a14;
+      border: 1px solid #16a34a;
+      color: #4ade80;
+    }
+
+    /* ── Step bar ── */
+    .step-wrap {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .step-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: #2d3a52;
+    }
+    .step-track {
+      width: 100%;
+      height: 3px;
+      background: #111620;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .step-fill {
+      height: 100%;
+      background: #6366f1;
+      border-radius: 2px;
+      transition: width 0.2s ease;
+    }
+
+    /* ── Code panel ── */
+    .code-panel {
+      display: flex;
+      flex-direction: column;
+      background: #090c14;
+      overflow: hidden;
+    }
+    .code-header {
+      padding: 10px 18px 8px;
+      border-bottom: 1px solid #1a1f2e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge-on { font-size: 0.7rem; background: #0a2010; border: 1px solid #15512a; color: #34d399; padding: 3px 10px; border-radius: 20px; }
+
+    .code-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 0;
+    }
+    .code-scroll::-webkit-scrollbar { width: 5px; }
+    .code-scroll::-webkit-scrollbar-thumb { background: #1a1f2e; border-radius: 3px; }
+
+    .code-line {
+      display: flex;
+      align-items: center;
+      padding: 1px 10px 1px 0;
+      position: relative;
+      transition: background 0.2s;
+      min-height: 1.8em;
+    }
+    .code-line.active { background: rgba(245,158,11,0.09); }
+    .code-line.active::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: #f59e0b;
+    }
+    .code-line.active .ln { color: #f59e0b; }
+    .arrow-col { width: 16px; text-align: center; font-size: 0.72rem; color: #f59e0b; flex-shrink: 0; }
+    .ln {
+      width: 26px;
+      text-align: right;
+      font-size: 0.7rem;
+      color: #1e2a40;
+      flex-shrink: 0;
+      padding-right: 10px;
+      font-family: monospace;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    .lc {
+      font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+      font-size: 0.86rem;
+      line-height: 1.8;
+      white-space: pre;
+      color: #94a3b8;
+    }
+
+    /* Syntax colors */
+    .kw { color: #c792ea; }
+    .fn { color: #82aaff; }
+    .nm { color: #f78c6c; }
+    .op { color: #89ddff; }
+    .vi { color: #ffcb6b; }
+    .cm { color: #2d3f58; font-style: italic; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Max Consecutive Ones</h1>
+  <p>Maior sequência de 1s consecutivos &nbsp;·&nbsp; O(n) &nbsp;·&nbsp; LeetCode #485</p>
+</header>
+
+<div class="controls">
+  <div class="presets">
+    <label>Exemplos:</label>
+    <button class="btn btn-preset active" data-arr="1,1,0,1,1,1">[1,1,0,1,1,1]</button>
+    <button class="btn btn-preset"        data-arr="1,1,0,1,0,1">[1,1,0,1,0,1]</button>
+    <button class="btn btn-preset"        data-arr="1,1,0,1,0,1,1,1,1,1,0,1">[1,1,0,1,0,1,1,1,1,1,0,1]</button>
+    <button class="btn btn-rand" id="randBtn">⟳ Aleatório</button>
+  </div>
+
+  <div class="divider"></div>
+
+  <button class="btn btn-play"  id="playBtn">▶ Play</button>
+  <button class="btn btn-step"  id="stepBtn">⏭ Step</button>
+  <button class="btn btn-reset" id="resetBtn">↺ Reset</button>
+
+  <div class="divider"></div>
+
+  <div class="speed-wrap">
+    <label>Vel.:</label>
+    <input type="range" id="speedSlider" min="1" max="10" value="5" />
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ═══════ Visualizer ═══════ -->
+  <div class="viz-panel">
+    <div class="panel-label">Visualização</div>
+
+    <div class="array-section">
+      <div class="array-row" id="arrayRow"></div>
+      <div class="ptr-row"   id="ptrRow"></div>
+    </div>
+
+    <div class="streak-bars">
+      <div class="bar-row">
+        <div class="bar-label">Sequência atual</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-streak" id="barStreak" style="width:0%"></div></div>
+        <div class="bar-count bar-count-streak" id="barStreakCount">0</div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Recorde (max)</div>
+        <div class="bar-track"><div class="bar-fill bar-fill-max" id="barMax" style="width:0%"></div></div>
+        <div class="bar-count bar-count-max" id="barMaxCount">0</div>
+      </div>
+    </div>
+
+    <div class="vars-strip">
+      <div class="var-chip chip-idx">
+        <div class="vn">Índice i</div>
+        <div class="vv" id="varIdx">—</div>
+      </div>
+      <div class="var-chip chip-count">
+        <div class="vn">countOnes</div>
+        <div class="vv" id="varCount">0</div>
+      </div>
+      <div class="var-chip chip-max">
+        <div class="vn">maxOnes</div>
+        <div class="vv" id="varMax">0</div>
+      </div>
+    </div>
+
+    <div class="status-box">
+      <div class="status-label">Status</div>
+      <div class="status-msg" id="statusMsg">Pronto. Pressione Play ou Step para iniciar.</div>
+    </div>
+
+    <div class="result-box" id="resultBox"></div>
+
+    <div class="step-wrap">
+      <div class="step-info">
+        <span id="stepLabel">Passo 0 de 0</span>
+        <span id="complexInfo"></span>
+      </div>
+      <div class="step-track"><div class="step-fill" id="stepFill" style="width:0%"></div></div>
+    </div>
+  </div>
+
+  <!-- ═══════ Code ═══════ -->
+  <div class="code-panel">
+    <div class="code-header">
+      <div class="panel-label">Código — JavaScript</div>
+      <span class="badge-on">O(n)</span>
+    </div>
+    <div class="code-scroll">
+      <div id="codeBlock"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Code lines ───────────────────────────────────────────────────────────────
+const CODE = [
+  [1,  `<span class="kw">const</span> <span class="fn">findMaxConsecutivesOnes</span> <span class="op">=</span> (nums) <span class="op">=></span> {`],
+  [2,  `  <span class="kw">let</span> <span class="vi">maxOnes</span>   <span class="op">=</span> <span class="nm">0</span>; <span class="cm">// maior sequência registrada</span>`],
+  [3,  `  <span class="kw">let</span> <span class="vi">countOnes</span> <span class="op">=</span> <span class="nm">0</span>; <span class="cm">// sequência atual</span>`],
+  [4,  ``],
+  [5,  `  <span class="kw">for</span> (<span class="kw">let</span> <span class="vi">value</span> <span class="kw">of</span> nums) {`],
+  [6,  `    <span class="kw">if</span> (<span class="vi">value</span> <span class="op">==</span> <span class="nm">1</span>)`],
+  [7,  `      <span class="vi">countOnes</span><span class="op">++</span>;`],
+  [8,  ``],
+  [9,  `    <span class="kw">if</span> (<span class="vi">value</span> <span class="op">!=</span> <span class="nm">1</span> <span class="op">&&</span> <span class="vi">countOnes</span> <span class="op">></span> <span class="nm">0</span>) {`],
+  [10, `      <span class="kw">if</span> (<span class="vi">countOnes</span> <span class="op">></span> <span class="vi">maxOnes</span>)`],
+  [11, `        <span class="vi">maxOnes</span> <span class="op">=</span> <span class="vi">countOnes</span>;`],
+  [12, `      <span class="vi">countOnes</span> <span class="op">=</span> <span class="nm">0</span>;`],
+  [13, `    }`],
+  [14, `  }`],
+  [15, ``],
+  [16, `  <span class="kw">if</span> (<span class="vi">countOnes</span> <span class="op">></span> <span class="vi">maxOnes</span>)`],
+  [17, `    <span class="vi">maxOnes</span> <span class="op">=</span> <span class="vi">countOnes</span>;`],
+  [18, ``],
+  [19, `  <span class="kw">return</span> <span class="vi">maxOnes</span>;`],
+  [20, `};`],
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let arr     = [1,1,0,1,1,1];
+let steps   = [];
+let cursor  = -1;
+let playing = false;
+let timer   = null;
+
+// ── DOM ───────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const arrayRow  = $('arrayRow');
+const ptrRow    = $('ptrRow');
+const statusMsg = $('statusMsg');
+const resultBox = $('resultBox');
+const stepLabel = $('stepLabel');
+const stepFill  = $('stepFill');
+const complexInfo = $('complexInfo');
+const varIdx    = $('varIdx');
+const varCount  = $('varCount');
+const varMax    = $('varMax');
+const barStreak = $('barStreak');
+const barMax    = $('barMax');
+const barStreakCount = $('barStreakCount');
+const barMaxCount    = $('barMaxCount');
+const playBtn   = $('playBtn');
+const stepBtn   = $('stepBtn');
+const resetBtn  = $('resetBtn');
+const codeBlock = $('codeBlock');
+
+// ── Render code ───────────────────────────────────────────────────────────────
+function renderCode() {
+  codeBlock.innerHTML = CODE.map(([id, html]) =>
+    `<div class="code-line" id="cl${id}">
+      <span class="arrow-col"></span>
+      <span class="ln">${id}</span>
+      <span class="lc${html ? '' : ' empty'}">${html}</span>
+    </div>`
+  ).join('');
+}
+
+function highlightLine(lineId) {
+  document.querySelectorAll('.code-line').forEach(el => {
+    el.classList.remove('active');
+    el.querySelector('.arrow-col').textContent = '';
+  });
+  if (!lineId) return;
+  const el = $(`cl${lineId}`);
+  if (!el) return;
+  el.classList.add('active');
+  el.querySelector('.arrow-col').textContent = '→';
+  el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+// ── Step generation ───────────────────────────────────────────────────────────
+function generateSteps(nums) {
+  const s = [];
+  let countOnes = 0, maxOnes = 0;
+  let streakStart = -1, maxStart = -1;
+
+  const snap = (ex = {}) => ({ countOnes, maxOnes, streakStart, maxStart, ...ex });
+
+  s.push({ line: 2, pointer: -1, preLoop: true, ...snap(), type: 'init',
+    msg: 'Inicializando: maxOnes = 0, countOnes = 0' });
+
+  for (let i = 0; i < nums.length; i++) {
+    const v = nums[i];
+
+    s.push({ line: 5, pointer: i, ...snap(), type: 'loop-iter',
+      msg: `Iteração i=${i} → nums[${i}] = ${v}` });
+
+    s.push({ line: 6, pointer: i, ...snap(), type: 'check-one',
+      msg: `nums[${i}] == 1 ? ${v === 1 ? '✓ Sim' : '✗ Não'}` });
+
+    if (v === 1) {
+      if (countOnes === 0) streakStart = i;
+      countOnes++;
+      s.push({ line: 7, pointer: i, ...snap(), type: 'inc',
+        msg: `countOnes++ → ${countOnes}  (sequência iniciada em i=${streakStart})` });
+
+      s.push({ line: 9, pointer: i, ...snap(), type: 'check-break-no',
+        msg: `nums[${i}] != 1 && countOnes > 0 ? ✗ Não — é um 1, continua` });
+    } else {
+      const enters = countOnes > 0;
+      s.push({ line: 9, pointer: i, ...snap(), type: 'check-break',
+        msg: `nums[${i}] != 1 && countOnes(${countOnes}) > 0 ? ${enters ? '✓ Sim — sequência quebrada!' : '✗ Não (countOnes já era 0)'}` });
+
+      if (enters) {
+        const willUpdate = countOnes > maxOnes;
+        s.push({ line: 10, pointer: i, ...snap(), type: 'check-max',
+          msg: `countOnes(${countOnes}) > maxOnes(${maxOnes}) ? ${willUpdate ? '✓ Sim — novo recorde!' : '✗ Não'}` });
+
+        if (willUpdate) {
+          maxStart = streakStart;
+          maxOnes = countOnes;
+          s.push({ line: 11, pointer: i, ...snap(), type: 'update-max',
+            msg: `maxOnes = ${maxOnes}  🏆 Nova sequência recorde!` });
+        }
+
+        countOnes = 0;
+        streakStart = -1;
+        s.push({ line: 12, pointer: i, ...snap(), type: 'reset',
+          msg: `countOnes = 0 — aguardando nova sequência de 1s` });
+      }
+    }
+  }
+
+  // Post-loop
+  const finalUpd = countOnes > maxOnes;
+  s.push({ line: 16, pointer: -1, postLoop: true, ...snap(), type: 'post-check',
+    msg: `Fim do array. countOnes(${countOnes}) > maxOnes(${maxOnes}) ? ${finalUpd ? '✓ Sim' : '✗ Não'}` });
+
+  if (finalUpd) {
+    maxStart = streakStart;
+    maxOnes = countOnes;
+    s.push({ line: 17, pointer: -1, postLoop: true, ...snap(), type: 'post-update',
+      msg: `maxOnes = ${maxOnes}  🏆 Última sequência era a maior!` });
+  }
+
+  s.push({ line: 19, pointer: -1, postLoop: true, ...snap(), type: 'done',
+    msg: `✓ Maior sequência de 1s consecutivos: ${maxOnes}` });
+
+  return s;
+}
+
+// ── Build DOM ─────────────────────────────────────────────────────────────────
+function buildDOM() {
+  arrayRow.innerHTML = arr.map((v, i) =>
+    `<div class="cell" id="cell${i}">
+      <span class="cell-idx">${i}</span>${v}
+    </div>`
+  ).join('');
+
+  ptrRow.innerHTML = arr.map((_, i) =>
+    `<div class="ptr-slot" id="ptr${i}"></div>`
+  ).join('');
+}
+
+// ── Render step ───────────────────────────────────────────────────────────────
+function renderStep(idx) {
+  if (idx < 0 || idx >= steps.length) return;
+  const { line, pointer, preLoop, postLoop, countOnes, maxOnes,
+          streakStart, maxStart, type, msg } = steps[idx];
+
+  const isDone = type === 'done';
+
+  arr.forEach((val, i) => {
+    const cell = $(`cell${i}`);
+    const ptr  = $(`ptr${i}`);
+
+    // Determine "visited" status
+    const visited = preLoop ? false : (postLoop ? true : i < pointer);
+    const isCurrent = i === pointer && !preLoop && !postLoop;
+
+    const inStreak = streakStart >= 0 && countOnes > 0
+      && i >= streakStart && i < streakStart + countOnes;
+    const inMax = maxStart >= 0 && i >= maxStart && i < maxStart + maxOnes;
+
+    // Reset
+    cell.className = 'cell';
+
+    if (isDone && inMax) {
+      cell.classList.add('c-max-final');
+    } else if (inMax) {
+      cell.classList.add('c-max');
+    } else if (inStreak) {
+      cell.classList.add('c-streak');
+    } else if (isCurrent) {
+      cell.classList.add(val === 1 ? 'c-one-unvisited' : 'c-zero-unvisited');
+    } else if (visited) {
+      cell.classList.add(val === 1 ? 'c-one-visited' : 'c-zero-visited');
+    } else {
+      cell.classList.add(val === 1 ? 'c-one-unvisited' : 'c-zero-unvisited');
+    }
+
+    if (isCurrent) cell.classList.add('c-current');
+
+    // Pointer tag
+    ptr.innerHTML = isCurrent
+      ? `<span class="ptr-tag ptr-i">i</span>`
+      : '';
+  });
+
+  // Variables
+  varIdx.textContent   = preLoop || postLoop ? '—' : pointer;
+  varCount.textContent = countOnes;
+  varMax.textContent   = maxOnes;
+
+  // Streak bars
+  const barLen = Math.max(arr.length, 1);
+  barStreak.style.width      = (countOnes / barLen * 100) + '%';
+  barMax.style.width         = (maxOnes   / barLen * 100) + '%';
+  barStreakCount.textContent = countOnes;
+  barMaxCount.textContent   = maxOnes;
+
+  // Status
+  statusMsg.textContent = msg;
+
+  // Result overlay
+  if (isDone) {
+    resultBox.className = 'result-box show';
+    resultBox.textContent = `✓ Maior sequência: ${maxOnes} uns consecutivos`;
+  } else {
+    resultBox.className = 'result-box';
+  }
+
+  // Code highlight
+  highlightLine(line);
+
+  // Step bar
+  const pct = steps.length > 1 ? (idx / (steps.length - 1)) * 100 : 100;
+  stepFill.style.width = pct + '%';
+  stepLabel.textContent = `Passo ${idx + 1} de ${steps.length}`;
+
+  // Complexity info
+  const iters = steps.filter(s => s.type === 'loop-iter').length;
+  complexInfo.textContent = iters > 0 ? `${iters} elementos percorridos` : '';
+}
+
+// ── Controls ──────────────────────────────────────────────────────────────────
+function getDelay() { return Math.round(1400 / parseInt(speedSlider.value)); }
+
+function updateButtons() {
+  const done = cursor >= steps.length - 1;
+  playBtn.textContent = playing ? '⏸ Pausar' : '▶ Play';
+  playBtn.disabled = done;
+  stepBtn.disabled  = done || playing;
+}
+
+function clearVisual() {
+  arr.forEach((val, i) => {
+    const c = $(`cell${i}`);
+    if (c) {
+      c.className = 'cell';
+      c.classList.add(val === 1 ? 'c-one-unvisited' : 'c-zero-unvisited');
+    }
+    const p = $(`ptr${i}`);
+    if (p) p.innerHTML = '';
+  });
+  varIdx.textContent = '—';
+  varCount.textContent = varMax.textContent = '0';
+  barStreak.style.width = barMax.style.width = '0%';
+  barStreakCount.textContent = barMaxCount.textContent = '0';
+  statusMsg.textContent = 'Pronto. Pressione Play ou Step para iniciar.';
+  resultBox.className = 'result-box';
+  stepFill.style.width = '0%';
+  stepLabel.textContent = `Passo 0 de ${steps.length}`;
+  complexInfo.textContent = '';
+  highlightLine(null);
+}
+
+function doStep() {
+  if (cursor < steps.length - 1) {
+    cursor++;
+    renderStep(cursor);
+    updateButtons();
+  }
+}
+
+function startPlay() {
+  if (cursor >= steps.length - 1) return;
+  playing = true;
+  updateButtons();
+  const tick = () => {
+    if (!playing || cursor >= steps.length - 1) {
+      playing = false; updateButtons(); return;
+    }
+    doStep();
+    timer = setTimeout(tick, getDelay());
+  };
+  timer = setTimeout(tick, getDelay());
+}
+
+function pausePlay() {
+  playing = false;
+  clearTimeout(timer);
+  updateButtons();
+}
+
+function resetAll() {
+  pausePlay();
+  cursor = -1;
+  clearVisual();
+  updateButtons();
+}
+
+function loadArray(nums) {
+  pausePlay();
+  arr   = nums;
+  steps = generateSteps(arr);
+  buildDOM();
+  cursor = -1;
+  clearVisual();
+  updateButtons();
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+playBtn.addEventListener('click', () => { if (playing) pausePlay(); else startPlay(); });
+stepBtn.addEventListener('click', () => { pausePlay(); doStep(); });
+resetBtn.addEventListener('click', resetAll);
+
+const speedSlider = $('speedSlider');
+
+document.querySelectorAll('.btn-preset').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const nums = btn.dataset.arr.split(',').map(Number);
+    loadArray(nums);
+  });
+});
+
+$('randBtn').addEventListener('click', () => {
+  document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+  const len  = 10 + Math.floor(Math.random() * 5);
+  const nums = Array.from({ length: len }, () => Math.random() < 0.65 ? 1 : 0);
+  loadArray(nums);
+});
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+renderCode();
+loadArray(arr);
+</script>
+</body>
+</html>

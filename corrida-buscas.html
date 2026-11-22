@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corrida de Buscas</title>
+  <style>
+    :root {
+      --bg: #07080d;
+      --stage: #0f1117;
+      --panel: #141824;
+      --line: #1e2130;
+      --line-2: #2d3148;
+      --text: #e2e8f0;
+      --strong: #f8fafc;
+      --muted: #64748b;
+      --dim: #334155;
+      --accent: #6366f1;
+      --current: #f59e0b;
+      --found: #22c55e;
+      --miss: #ef4444;
+
+      --c-seq: #60a5fa;
+      --c-ord: #a78bfa;
+      --c-bin: #f472b6;
+      --c-rec: #34d399;
+
+      --mono: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg); color: var(--text);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+
+    /* ── Toolbar (fora do palco — não aparece na gravação) ── */
+    .toolbar {
+      display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;
+      padding: 8px 12px; background: #10131c; border-bottom: 1px solid var(--line);
+      font-size: 13px;
+    }
+    body.clean .toolbar { display: none; }
+    .toolbar .sep { width: 1px; height: 20px; background: var(--line); }
+    .toolbar label { color: var(--muted); }
+    .toolbar select, .toolbar input[type=number] {
+      padding: 4px 6px; background: #1a1f2e; border: 1px solid var(--line-2); border-radius: 6px;
+      color: var(--strong); font-size: 13px; outline: none;
+    }
+    .toolbar input[type=number] { width: 64px; text-align: center; }
+    .toolbar input[type=range] { width: 80px; accent-color: var(--accent); }
+    .btn {
+      padding: 5px 10px; border: 1px solid var(--line-2); border-radius: 6px; cursor: pointer;
+      background: var(--line); color: #94a3b8; font-size: 12.5px; font-weight: 600;
+    }
+    .btn:hover:not(:disabled) { background: #252840; color: var(--strong); }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn.rec { background: #7f1d1d; border-color: #b91c1c; color: #fecaca; }
+    .btn.chip.active { border-color: var(--accent); color: var(--strong); }
+    .hint { color: var(--dim); font-size: 11.5px; }
+
+    /* ── Palco 1080×1350 (4:5 — feed do LinkedIn) ── */
+    .viewport { flex: 1; display: flex; align-items: safe center; justify-content: safe center; overflow: auto; position: relative; }
+    .stage-holder { position: relative; }
+    #stage {
+      position: absolute; top: 0; left: 0;
+      width: 1080px; height: 1350px; transform-origin: top left;
+      background:
+        radial-gradient(900px 500px at 85% -5%, rgba(99,102,241,.16), transparent 60%),
+        radial-gradient(700px 500px at -10% 105%, rgba(52,211,153,.10), transparent 60%),
+        var(--stage);
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      padding: 44px 48px 32px;
+    }
+
+    .s-head { margin-bottom: 20px; }
+    .s-kicker { font-size: 20px; color: var(--accent); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .s-title { font-size: 56px; font-weight: 800; color: var(--strong); letter-spacing: -.02em; line-height: 1.05; margin-top: 8px; }
+    .s-sub { margin-top: 14px; font-size: 24px; color: #94a3b8; display: flex; gap: 22px; align-items: baseline; }
+    .s-sub b { color: var(--strong); font-variant-numeric: tabular-nums; }
+    .s-sub .key { color: var(--current); font-family: var(--mono); font-size: 28px; }
+    .s-sub .tick { margin-left: auto; font-family: var(--mono); font-size: 22px; color: var(--muted); }
+    .s-sub .tick b { font-size: 26px; }
+
+    .lanes { display: flex; flex-direction: column; gap: 14px; }
+    .lane {
+      background: var(--panel); border: 1px solid var(--line);
+      border-left: 6px solid var(--lane-color); border-radius: 14px;
+      padding: 12px 22px 10px;
+      transition: box-shadow .3s, opacity .4s;
+    }
+    .lane.done-found { box-shadow: 0 0 0 2px color-mix(in srgb, var(--found) 55%, transparent), 0 0 40px -10px var(--found); }
+    .lane.done-miss  { box-shadow: 0 0 0 2px color-mix(in srgb, var(--miss) 50%, transparent); }
+
+    .lane-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+    .lane-title { font-size: 25px; font-weight: 700; color: var(--lane-color); }
+    .lane-bigo { font-family: var(--mono); font-size: 16px; color: var(--muted); border: 1px solid var(--line-2); border-radius: 6px; padding: 1px 8px; }
+    .lane-badge { font-size: 16px; font-weight: 700; padding: 2px 10px; border-radius: 99px; opacity: 0; transform: scale(.7); transition: all .3s; }
+    .lane-badge.show { opacity: 1; transform: scale(1); }
+    .lane-badge.ok { background: color-mix(in srgb, var(--found) 22%, transparent); color: var(--found); }
+    .lane-badge.no { background: color-mix(in srgb, var(--miss) 22%, transparent); color: var(--miss); }
+    .lane-count { margin-left: auto; font-size: 18px; color: var(--muted); }
+    .lane-count b { font-size: 34px; color: var(--strong); font-variant-numeric: tabular-nums; font-family: var(--mono); }
+
+    .array-row { display: flex; gap: var(--gap, 6px); }
+    .cell-wrap { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+    .cell {
+      width: 100%; height: var(--cell-h, 52px);
+      display: flex; align-items: center; justify-content: center;
+      background: #1a1f2e; border: 2px solid var(--line-2); border-radius: 8px;
+      font-family: var(--mono); font-weight: 700; font-size: var(--cell-font, 20px); color: var(--text);
+      transition: background .25s, border-color .25s, opacity .3s, transform .25s, color .25s;
+    }
+    .cell.out     { opacity: .14; }
+    .cell.visited { background: #1b1f2c; color: #475569; border-color: var(--line); }
+    .cell.inrange { border-color: color-mix(in srgb, var(--lane-color) 55%, var(--line-2)); }
+    .cell.current { background: color-mix(in srgb, var(--current) 28%, #1a1f2e); border-color: var(--current); color: #fff; transform: translateY(-6px); }
+    .cell.found   { background: color-mix(in srgb, var(--found) 35%, #1a1f2e); border-color: var(--found); color: #fff; transform: translateY(-6px) scale(1.1); animation: pop .5s ease; }
+    @keyframes pop { 0% { transform: scale(1); } 50% { transform: translateY(-10px) scale(1.25); } 100% { transform: translateY(-6px) scale(1.1); } }
+    .ptr { font-family: var(--mono); font-size: var(--ptr-font, 15px); font-weight: 700; height: 20px; margin-top: 4px; white-space: nowrap; }
+    .ptr.p-cur  { color: var(--current); }
+    .ptr.p-low  { color: var(--c-seq); }
+    .ptr.p-high { color: var(--c-bin); }
+
+    .lane-code {
+      margin-top: 6px; font-family: var(--mono); font-size: 17px; color: #94a3b8;
+      background: #0b0d14; border-radius: 8px; padding: 7px 12px;
+      border-left: 3px solid var(--lane-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-height: 34px;
+    }
+    .lane-code .kw { color: #c084fc; } .lane-code .num { color: #fbbf24; }
+    .lane-code.flash { animation: flash .35s ease; }
+    @keyframes flash { from { background: color-mix(in srgb, var(--lane-color) 22%, #0b0d14); } to { background: #0b0d14; } }
+
+    .stack { display: flex; gap: 6px; align-items: center; margin-top: 6px; min-height: 28px; flex-wrap: nowrap; overflow: hidden; }
+    .stack-label { font-size: 13px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; margin-right: 2px; }
+    .frame {
+      font-family: var(--mono); font-size: 15px; padding: 3px 9px; border-radius: 6px; white-space: nowrap;
+      background: color-mix(in srgb, var(--c-rec) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--c-rec) 40%, transparent); color: var(--c-rec);
+      animation: slide .3s ease;
+    }
+    .frame.top { background: color-mix(in srgb, var(--c-rec) 30%, transparent); color: #fff; }
+    .frame-arrow { color: var(--dim); font-size: 14px; }
+    @keyframes slide { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
+
+    /* placar */
+    .board { margin-top: auto; padding-top: 14px; }
+    .board-title { font-size: 15px; color: var(--muted); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 12px; font-weight: 600; }
+    .bar-row { display: grid; grid-template-columns: 250px 1fr 60px; align-items: center; gap: 14px; margin-bottom: 6px; }
+    .bar-name { font-size: 19px; font-weight: 600; color: var(--bar-color); }
+    .bar-track { height: 14px; background: #1a1f2e; border-radius: 5px; overflow: hidden; }
+    .bar-fill { height: 100%; width: 0; background: var(--bar-color); border-radius: 5px; transition: width .3s ease; }
+    .bar-val { font-family: var(--mono); font-size: 24px; font-weight: 700; text-align: right; color: var(--strong); font-variant-numeric: tabular-nums; }
+    .s-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 16px; color: var(--dim); }
+
+    /* overlays (gancho / resultado / fechamento) */
+    .overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 80px; gap: 26px;
+      background: rgba(7, 8, 13, .95);
+      opacity: 0; pointer-events: none; transition: opacity .5s ease;
+    }
+    .overlay.show { opacity: 1; }
+    .ov-kicker { font-size: 26px; color: var(--accent); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+    .ov-big { font-size: 86px; font-weight: 800; color: var(--strong); line-height: 1.05; letter-spacing: -.02em; }
+    .ov-mid { font-size: 34px; color: #cbd5e1; line-height: 1.35; }
+    .ov-mid b { color: var(--strong); }
+    .ov-vs { display: flex; gap: 40px; margin-top: 10px; }
+    .ov-vs > div { background: var(--panel); border: 1px solid var(--line-2); border-radius: 18px; padding: 26px 34px; min-width: 380px; }
+    .ov-vs .lbl { font-size: 24px; font-weight: 700; }
+    .ov-vs .val { font-family: var(--mono); font-size: 72px; font-weight: 800; color: var(--strong); margin-top: 6px; }
+    .ov-vs .cap { font-size: 20px; color: var(--muted); margin-top: 4px; }
+
+    .banner {
+      position: absolute; left: 48px; right: 48px; top: 1000px;
+      background: rgba(20, 24, 36, .94); border: 1px solid var(--line-2); border-radius: 16px;
+      padding: 16px 26px; font-size: 26px; color: #cbd5e1; text-align: center;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,.7);
+      opacity: 0; transform: translateY(14px); transition: all .4s ease; pointer-events: none; z-index: 3;
+    }
+    .banner.show { opacity: 1; transform: none; }
+    .banner b { color: var(--strong); }
+  </style>
+</head>
+<body>
+
+<div class="toolbar">
+  <label>n</label>
+  <select id="sizeSel"><option>8</option><option selected>16</option><option>32</option></select>
+  <button class="btn" id="newArrayBtn" title="Novo array aleatório">⟳ Array</button>
+  <span class="sep"></span>
+  <label>chave</label>
+  <input type="number" id="keyInput" />
+  <button class="btn chip" data-preset="first">primeiro</button>
+  <button class="btn chip" data-preset="middle">meio</button>
+  <button class="btn chip" data-preset="last">último</button>
+  <button class="btn chip" data-preset="missing">inexistente</button>
+  <span class="sep"></span>
+  <button class="btn primary" id="playBtn">▶ Play</button>
+  <button class="btn" id="stepBtn">⏭ Passo</button>
+  <button class="btn" id="resetBtn">↺ Reset</button>
+  <label>vel.</label>
+  <input type="range" id="speed" min="1" max="10" value="6" />
+  <span class="sep"></span>
+  <button class="btn rec" id="scriptBtn">🎬 Roteiro (~35s)</button>
+  <button class="btn" id="scaleBtn">Escala: ajustar</button>
+  <button class="btn" id="cleanBtn">Ocultar barra (H)</button>
+  <span class="hint">Espaço play · → passo · R reset · S roteiro · H barra · Esc para</span>
+</div>
+
+<div class="viewport" id="viewport">
+  <div class="stage-holder" id="holder">
+    <div id="stage">
+      <div class="s-head">
+        <div class="s-kicker">Algoritmos · Busca</div>
+        <div class="s-title">Corrida de Buscas</div>
+        <div class="s-sub">
+          <span>procurando <b class="key" id="keyShow">–</b></span>
+          <span>em <b id="nShow">–</b> elementos ordenados</span>
+          <span class="tick">passo <b id="tickNum">0</b></span>
+        </div>
+      </div>
+
+      <div class="lanes" id="lanes"></div>
+
+      <div class="board">
+        <div class="board-title">Comparações</div>
+        <div id="bars"></div>
+        <div class="s-foot"><span>1 passo = 1 comparação em todos</span><span>JavaScript</span></div>
+      </div>
+
+      <div class="banner" id="banner"></div>
+      <div class="overlay" id="overlay"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// Faixas: código (1 linha por passo) + gerador de passos
+// Cada passo = 1 comparação com um elemento.
+// ─────────────────────────────────────────────
+const K = (s) => s
+  .replace(/\b(const|let|for|if|else|return|while)\b/g, '<span class="kw">$1</span>')
+  .replace(/\b(\d+)\b/g, '<span class="num">$1</span>');
+
+const LANES = [
+  { id: 'seq', name: 'Sequencial',         color: 'var(--c-seq)', bigo: 'O(n)',     steps: (a, k) => seqSteps(a, k, false) },
+  { id: 'ord', name: 'Sequencial ordenada', color: 'var(--c-ord)', bigo: 'O(n)',     steps: (a, k) => seqSteps(a, k, true) },
+  { id: 'bin', name: 'Binária iterativa',  color: 'var(--c-bin)', bigo: 'O(log n)', steps: (a, k) => binSteps(a, k, false) },
+  { id: 'rec', name: 'Binária recursiva',  color: 'var(--c-rec)', bigo: 'O(log n)', steps: (a, k) => binSteps(a, k, true) },
+];
+
+function seqSteps(a, key, ordered) {
+  const s = []; let c = 0;
+  for (let i = 0; i < a.length; i++) {
+    c++;
+    const base = { cur: i, visitedUpTo: i - 1, cmp: c };
+    if (a[i] === key) { s.push({ ...base, done: 'found', result: i, code: `if (nums[${i}] === ${key}) return ${i};  // ${a[i]} ✓` }); return s; }
+    if (ordered && a[i] > key) { s.push({ ...base, done: 'miss', result: -1, code: `if (nums[${i}] > ${key}) return -1;  // ${a[i]} > ${key}, parou` }); return s; }
+    s.push({ ...base, code: `if (nums[${i}] === ${key})  // ${a[i]} ≠ ${key}, i++` });
+  }
+  s.push({ cur: -1, visitedUpTo: a.length - 1, cmp: c, done: 'miss', result: -1, code: `return -1;  // percorreu tudo` });
+  return s;
+}
+
+function binSteps(a, key, recursive) {
+  const s = []; let c = 0, low = 0, high = a.length - 1;
+  const stack = [];
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    c++;
+    if (recursive) stack.push(`(${low},${high})`);
+    const base = { cur: mid, low, high, cmp: c, stack: [...stack] };
+    if (a[mid] === key) {
+      s.push({ ...base, done: 'found', result: mid, code: `mid = ${mid} → nums[${mid}] === ${key}  return ${mid}; ✓` });
+      return s;
+    }
+    if (key < a[mid]) {
+      s.push({ ...base, code: recursive ? `${key} < ${a[mid]} → return busca(low, ${mid} - 1)` : `${key} < ${a[mid]} → high = ${mid} - 1` });
+      high = mid - 1;
+    } else {
+      s.push({ ...base, code: recursive ? `${key} > ${a[mid]} → return busca(${mid} + 1, high)` : `${key} > ${a[mid]} → low = ${mid} + 1` });
+      low = mid + 1;
+    }
+  }
+  if (recursive) stack.push(`(${low},${high})`);
+  s.push({ cur: -1, low, high, cmp: c, done: 'miss', result: -1, stack: [...stack],
+           code: recursive ? `if (${low} > ${high}) return -1;  // vazio` : `while (${low} <= ${high}) ✗ → return -1;` });
+  return s;
+}
+
+// ─────────────────────────────────────────────
+// Estado
+// ─────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const DEMO_ARRAY = [-5, 0, 2, 8, 13, 16, 19, 23, 29, 34, 38, 41, 47, 52, 60, 71];
+let arr = DEMO_ARRAY.slice(), key = 71, tick = 0, timer = null, steps = {};
+let currentPreset = 'last';
+
+function generateArray(n) {
+  const set = new Set();
+  while (set.size < n) set.add(Math.floor(Math.random() * n * 5) - n);
+  return [...set].sort((x, y) => x - y);
+}
+
+function pickKey(preset) {
+  const n = arr.length;
+  if (preset === 'first')  return arr[0];
+  if (preset === 'middle') return arr[Math.floor((n - 1) / 2)];
+  if (preset === 'last')   return arr[n - 1];
+  for (let t = 0; t < 300; t++) {
+    const v = arr[0] + Math.floor(Math.random() * (arr[n - 1] - arr[0]));
+    if (!arr.includes(v)) return v;
+  }
+  return arr[n - 1] + 1;
+}
+
+// ─────────────────────────────────────────────
+// DOM
+// ─────────────────────────────────────────────
+function buildLanes() {
+  const n = arr.length;
+  const dims = n <= 8  ? { h: '60px', f: '26px', p: '17px', g: '10px' }
+             : n <= 16 ? { h: '52px', f: '20px', p: '15px', g: '6px'  }
+             :           { h: '38px', f: '12px', p: '10px', g: '3px'  };
+  $('lanes').innerHTML = LANES.map((l) => `
+    <section class="lane" id="lane-${l.id}" style="--lane-color:${l.color};--cell-h:${dims.h};--cell-font:${dims.f};--ptr-font:${dims.p};--gap:${dims.g}">
+      <div class="lane-head">
+        <span class="lane-title">${l.name}</span>
+        <span class="lane-bigo">${l.bigo}</span>
+        <span class="lane-badge" id="badge-${l.id}"></span>
+        <span class="lane-count"><b id="cnt-${l.id}">0</b> comp.</span>
+      </div>
+      <div class="array-row">
+        ${arr.map((v, i) => `<div class="cell-wrap"><div class="cell" id="c-${l.id}-${i}">${v}</div><div class="ptr" id="p-${l.id}-${i}"></div></div>`).join('')}
+      </div>
+      ${l.id === 'rec' ? `<div class="stack" id="stack-rec"></div>` : ''}
+      <div class="lane-code" id="code-${l.id}">&nbsp;</div>
+    </section>`).join('');
+
+  $('bars').innerHTML = LANES.map((l) => `
+    <div class="bar-row" style="--bar-color:${l.color}">
+      <span class="bar-name">${l.name}</span>
+      <div class="bar-track"><div class="bar-fill" id="bar-${l.id}"></div></div>
+      <span class="bar-val" id="bv-${l.id}">0</span>
+    </div>`).join('');
+}
+
+function renderLane(l, idx) {
+  const list = steps[l.id], n = arr.length;
+  const st = idx < 0 ? null : list[Math.min(idx, list.length - 1)];
+  const fresh = idx >= 0 && idx < list.length;      // passo novo nesta faixa?
+  const isBin = l.id === 'bin' || l.id === 'rec';
+
+  for (let i = 0; i < n; i++) {
+    const c = $(`c-${l.id}-${i}`), p = $(`p-${l.id}-${i}`);
+    c.className = 'cell'; p.className = 'ptr'; p.textContent = '';
+    if (!st) continue;
+    if (isBin) {
+      c.classList.add(i >= st.low && i <= st.high ? 'inrange' : 'out');
+      if (i === st.cur) { c.classList.add(st.done === 'found' ? 'found' : 'current'); p.textContent = 'mid'; p.classList.add('p-cur'); }
+      else if (n <= 16 && st.low <= st.high) {
+        if (i === st.low)  { p.textContent = 'low';  p.classList.add('p-low'); }
+        if (i === st.high) { p.textContent = 'high'; p.classList.add('p-high'); }
+      }
+    } else {
+      if (i <= st.visitedUpTo) c.classList.add('visited');
+      if (i === st.cur) { c.classList.add(st.done === 'found' ? 'found' : 'current'); p.textContent = 'i'; p.classList.add('p-cur'); }
+    }
+  }
+
+  const code = $(`code-${l.id}`);
+  code.innerHTML = st ? K(st.code) : '&nbsp;';
+  if (fresh) { code.classList.remove('flash'); void code.offsetWidth; code.classList.add('flash'); }
+
+  const cmp = st ? st.cmp : 0;
+  $(`cnt-${l.id}`).textContent = cmp;
+  $(`bv-${l.id}`).textContent = cmp;
+  $(`bar-${l.id}`).style.width = `${(cmp / n) * 100}%`;
+
+  const lane = $(`lane-${l.id}`), badge = $(`badge-${l.id}`);
+  const done = st && st.done;
+  lane.classList.toggle('done-found', done === 'found');
+  lane.classList.toggle('done-miss', done === 'miss');
+  badge.className = 'lane-badge' + (done ? ' show ' + (done === 'found' ? 'ok' : 'no') : '');
+  badge.textContent = done === 'found' ? `✓ índice ${st.result}` : done === 'miss' ? '✗ -1' : '';
+
+  if (l.id === 'rec') {
+    const fr = st ? st.stack : [];
+    $('stack-rec').innerHTML = '<span class="stack-label">pilha</span>' + fr.map((f, i) =>
+      (i ? '<span class="frame-arrow">→</span>' : '') +
+      `<span class="frame ${i === fr.length - 1 ? 'top' : ''}">busca${f}${i === fr.length - 1 && st.done ? ` ⇒ ${st.result}` : ''}</span>`).join('');
+  }
+}
+
+function render() {
+  LANES.forEach((l) => renderLane(l, tick - 1));
+  $('tickNum').textContent = tick;
+  updateButtons();
+}
+
+const maxTicks = () => Math.max(0, ...LANES.map((l) => (steps[l.id] || []).length));
+
+function updateButtons() {
+  const end = tick >= maxTicks();
+  $('stepBtn').disabled = end;
+  $('playBtn').textContent = timer ? '⏸ Pausar' : end ? '✓ Fim' : '▶ Play';
+  $('playBtn').disabled = end && !timer;
+}
+
+// ─────────────────────────────────────────────
+// Controle manual
+// ─────────────────────────────────────────────
+function prepare() {
+  pause();
+  tick = 0;
+  key = Number($('keyInput').value);
+  steps = {};
+  LANES.forEach((l) => { steps[l.id] = l.steps(arr, key); });
+  $('keyShow').textContent = key;
+  $('nShow').textContent = arr.length;
+  render();
+}
+
+function setPreset(p) {
+  currentPreset = p;
+  document.querySelectorAll('[data-preset]').forEach((b) => b.classList.toggle('active', b.dataset.preset === p));
+  $('keyInput').value = pickKey(p);
+  prepare();
+}
+
+function loadArray(a) { arr = a; buildLanes(); }
+
+function step() { if (tick < maxTicks()) { tick++; render(); } }
+const delay = () => 1300 - Number($('speed').value) * 115;
+
+function play() {
+  if (tick >= maxTicks()) return;
+  const loop = () => { step(); if (tick >= maxTicks()) return pause(); timer = setTimeout(loop, delay()); };
+  timer = setTimeout(loop, 120);
+  updateButtons();
+}
+function pause() { clearTimeout(timer); timer = null; updateButtons(); }
+
+// ─────────────────────────────────────────────
+// Roteiro (~35s) para gravar: gancho → corrida 1 → corrida 2 → fechamento
+// ─────────────────────────────────────────────
+let runId = 0;
+const sleep = (ms, id) => new Promise((res, rej) => setTimeout(() => (id === runId ? res() : rej('cancel')), ms));
+
+function overlay(html) { const o = $('overlay'); if (html) { o.innerHTML = html; o.classList.add('show'); } else o.classList.remove('show'); }
+function banner(html) { const b = $('banner'); if (html) { b.innerHTML = html; b.classList.add('show'); } else b.classList.remove('show'); }
+
+async function race(k, id, tickMs) {
+  $('keyInput').value = k;
+  document.querySelectorAll('[data-preset]').forEach((b) => b.classList.remove('active'));
+  prepare();
+  await sleep(700, id);
+  while (tick < maxTicks()) { step(); await sleep(tickMs, id); }
+}
+
+const cnt = (lid) => steps[lid][steps[lid].length - 1].cmp;
+
+async function runScript() {
+  const id = ++runId;
+  pause();
+  try {
+    loadArray(DEMO_ARRAY.slice());
+    $('sizeSel').value = '16';
+    $('keyInput').value = 71; prepare();
+
+    // 0 — gancho (3s)
+    overlay(`<div class="ov-kicker">Algoritmos · Busca</div>
+             <div class="ov-big">Qual busca encontra<br>mais rápido?</div>
+             <div class="ov-mid">4 algoritmos · mesmo array · <b>1 comparação por passo</b></div>`);
+    await sleep(3200, id);
+    overlay(null);
+    await sleep(500, id);
+
+    // 1 — corrida: último elemento (~11s)
+    banner(`Corrida 1 · procurando o <b>último</b> elemento (<b>71</b>)`);
+    await sleep(1300, id); banner(null);
+    await race(71, id, 480);
+    banner(`Binária: <b style="color:var(--c-bin)">${cnt('bin')}</b> comparações · Sequencial: <b style="color:var(--c-seq)">${cnt('seq')}</b>`);
+    await sleep(2300, id); banner(null);
+    await sleep(300, id);
+
+    // 2 — corrida: valor inexistente (~9s)
+    banner(`Corrida 2 · procurando <b>20</b>, que <b>não existe</b>`);
+    await sleep(1300, id); banner(null);
+    await race(20, id, 480);
+    banner(`A ordenada para quando passa do valor (<b style="color:var(--c-ord)">${cnt('ord')}</b>) · a binária descarta metade a cada passo (<b style="color:var(--c-bin)">${cnt('bin')}</b>)`);
+    await sleep(2800, id); banner(null);
+
+    // 3 — fechamento (4s)
+    overlay(`<div class="ov-kicker">E se o array tiver</div>
+             <div class="ov-big">1.000.000 de itens?</div>
+             <div class="ov-vs">
+               <div><div class="lbl" style="color:var(--c-seq)">Sequencial · O(n)</div><div class="val">1.000.000</div><div class="cap">comparações no pior caso</div></div>
+               <div><div class="lbl" style="color:var(--c-bin)">Binária · O(log n)</div><div class="val">20</div><div class="cap">comparações no pior caso</div></div>
+             </div>
+             <div class="ov-mid">A binária só funciona com os dados <b>ordenados</b>.</div>`);
+    await sleep(4500, id);
+  } catch (e) {
+    if (e !== 'cancel') throw e;
+  }
+}
+
+function stopScript() { runId++; overlay(null); banner(null); pause(); }
+
+// ─────────────────────────────────────────────
+// Escala do palco (ajustar à janela ou 1:1 nativo p/ gravar em 1080×1350)
+// ─────────────────────────────────────────────
+let fit = true;
+function layout() {
+  const vp = $('viewport').getBoundingClientRect();
+  const s = fit ? Math.min((vp.width - 24) / 1080, (vp.height - 24) / 1350) : 1;
+  $('stage').style.transform = `scale(${s})`;
+  $('holder').style.width = `${1080 * s}px`;
+  $('holder').style.height = `${1350 * s}px`;
+  $('scaleBtn').textContent = fit ? 'Escala: ajustar' : 'Escala: 1:1';
+}
+window.addEventListener('resize', layout);
+
+// ─────────────────────────────────────────────
+// Eventos
+// ─────────────────────────────────────────────
+$('playBtn').onclick = () => (timer ? pause() : play());
+$('stepBtn').onclick = () => { pause(); step(); };
+$('resetBtn').onclick = () => { stopScript(); prepare(); };
+$('newArrayBtn').onclick = () => { stopScript(); loadArray(generateArray(Number($('sizeSel').value))); setPreset(currentPreset || 'last'); };
+$('sizeSel').onchange = $('newArrayBtn').onclick;
+$('keyInput').onchange = () => { stopScript(); currentPreset = null; document.querySelectorAll('[data-preset]').forEach((b) => b.classList.remove('active')); prepare(); };
+document.querySelectorAll('[data-preset]').forEach((b) => (b.onclick = () => { stopScript(); setPreset(b.dataset.preset); }));
+$('scriptBtn').onclick = runScript;
+$('scaleBtn').onclick = () => { fit = !fit; layout(); };
+$('cleanBtn').onclick = () => { document.body.classList.toggle('clean'); layout(); };
+
+document.addEventListener('keydown', (e) => {
+  if (['INPUT', 'SELECT'].includes(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); timer ? pause() : play(); }
+  else if (e.code === 'ArrowRight') { pause(); step(); }
+  else if (e.key === 'r' || e.key === 'R') { stopScript(); prepare(); }
+  else if (e.key === 's' || e.key === 'S') runScript();
+  else if (e.key === 'h' || e.key === 'H') { document.body.classList.toggle('clean'); layout(); }
+  else if (e.key === 'Escape') stopScript();
+});
+
+buildLanes();
+setPreset('last');
+// Parâmetros opcionais: ?key=20&tick=4 (estado) · scale=1 (1:1) · clean=1 (sem barra) · script=1 (inicia o roteiro)
+(() => {
+  const q = new URLSearchParams(location.search);
+  if (q.has('key')) { $('keyInput').value = q.get('key'); currentPreset = null; prepare(); }
+  if (q.has('tick')) { tick = Math.min(Number(q.get('tick')), maxTicks()); render(); }
+  if (q.get('scale') === '1') fit = false;
+  if (q.get('clean') === '1') document.body.classList.add('clean');
+  if (q.get('script') === '1') setTimeout(runScript, 300);
+})();
+layout();
+</script>
+</body>
+</html>

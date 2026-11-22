@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AlgoView — algoritmos que você vê funcionar</title>
+  <meta name="description" content="Simuladores interativos de algoritmos de busca e ordenação: código linha a linha, comparações lado a lado e 1 milhão de elementos em super velocidade." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --secondary: #6e6e73; --tertiary: #aeaeb2;
+      --fill: #f2f2f7; --hair: rgba(0,0,0,.08);
+      --blue: #0071e3; --orange: #ff9500; --pink: #ff375f; --purple: #af52de; --teal: #30b0c7; --green: #34c759;
+      --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      --mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      --spring: cubic-bezier(.32, .72, 0, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+
+    header { padding: 96px 0 56px; text-align: center; }
+    .kicker { font-size: 15px; font-weight: 600; color: var(--blue); letter-spacing: -.01em; margin-bottom: 14px; }
+    h1 { font-size: clamp(44px, 7vw, 80px); font-weight: 700; letter-spacing: -.045em; line-height: 1.02; }
+    h1 span { background: linear-gradient(90deg, var(--blue), var(--purple) 55%, var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { max-width: 620px; margin: 22px auto 0; font-size: clamp(18px, 2.2vw, 22px); line-height: 1.45; color: var(--secondary); letter-spacing: -.01em; }
+    .cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 34px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600; padding: 14px 26px; border-radius: 99px; box-shadow: 0 10px 24px -10px var(--blue); transition: transform .4s var(--spring), background .2s; }
+    .cta:hover { transform: scale(1.04); background: #0077ed; }
+
+    .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; padding-bottom: 40px; }
+    .card { grid-column: span 2; background: var(--card); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 12px 32px -16px rgba(0,0,0,.12); transition: transform .5s var(--spring), box-shadow .5s var(--spring); }
+    .card:hover { transform: translateY(-6px); box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 28px 50px -22px rgba(0,0,0,.22); }
+    .card.wide { grid-column: span 3; }
+    .card.hero { grid-column: span 6; flex-direction: row; min-height: 380px; }
+    .art { background: var(--fill); height: 190px; display: flex; align-items: flex-end; justify-content: center; gap: 6px; padding: 28px 28px 0; position: relative; }
+    .hero .art { height: auto; flex: 1.15; padding: 0; background: linear-gradient(160deg, #eef4ff, #f6f0ff); }
+    .body { padding: 24px 26px 26px; display: flex; flex-direction: column; flex: 1; }
+    .hero .body { padding: 48px 44px; justify-content: center; }
+    .tag { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 8px; }
+    h2 { font-size: 24px; font-weight: 700; letter-spacing: -.03em; }
+    .hero h2 { font-size: 40px; letter-spacing: -.04em; line-height: 1.05; }
+    .body p { margin-top: 10px; font-size: 15.5px; line-height: 1.5; color: var(--secondary); }
+    .hero .body p { font-size: 18px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+    .chips span { font-size: 12.5px; font-weight: 500; background: var(--fill); color: var(--text); padding: 5px 11px; border-radius: 99px; }
+    .meta { margin-top: auto; padding-top: 18px; display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 13px; color: var(--tertiary); font-variant-ligatures: none; }
+    .open { font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--blue); }
+    .card:hover .open { text-decoration: underline; }
+    .dark { font-family: var(--sans); font-size: 12px; font-weight: 600; color: #fff; background: #1d1d1f; padding: 3px 9px; border-radius: 99px; }
+
+    /* ilustrações */
+    .bars { position: absolute; inset: 48px 48px 0; display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+    .bar { width: 26px; border-radius: 9px 9px 0 0; background: #d1d1d6; animation: grow 1.2s var(--spring) both; }
+    .hero .bar { width: 46px; border-radius: 14px 14px 0 0; }
+    .bar.o { background: var(--orange); } .bar.p { background: var(--pink); } .bar.g { background: #8e8e93; } .bar.d { background: #48484a; }
+    @keyframes grow { from { transform: scaleY(.05); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
+    .cells { align-items: center; padding-bottom: 28px; gap: 5px; }
+    .cell { width: 34px; height: 34px; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; font: 600 13px var(--mono); color: var(--secondary); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .cell.out { opacity: .3; } .cell.mid { background: var(--blue); color: #fff; } .cell.one { background: #1d1d1f; color: #fff; } .cell.hot { background: var(--green); color: #fff; }
+    .ptrs { position: absolute; left: 0; right: 0; bottom: 30px; text-align: center; font: 600 12px var(--mono); color: var(--blue); }
+    .lanes { flex-direction: column; align-items: stretch; justify-content: center; padding: 26px 30px; gap: 12px; background: #16161a; }
+    .lane { height: 12px; border-radius: 99px; background: #2c2c30; overflow: hidden; }
+    .lane i { display: block; height: 100%; border-radius: 99px; animation: run 2.4s var(--spring) both; }
+    @keyframes run { from { width: 0; } }
+
+    .about { text-align: center; padding: 56px 0 24px; color: var(--secondary); }
+    .about h3 { font-size: 28px; font-weight: 700; letter-spacing: -.03em; color: var(--text); }
+    .about p { max-width: 640px; margin: 12px auto 0; font-size: 17px; line-height: 1.55; }
+    .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px; margin-top: 22px; font-size: 14px; }
+    kbd { font: 600 12px var(--sans); background: #fff; border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 6px; padding: 2px 7px; margin-right: 4px; color: var(--text); }
+    footer { text-align: center; padding: 40px 0 56px; font-size: 13px; color: var(--tertiary); }
+    footer a { color: var(--secondary); } footer a:hover { color: var(--blue); }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .card, .card.wide { grid-column: span 1; }
+      .card.hero { grid-column: span 2; flex-direction: column; }
+      .hero .art { min-height: 240px; }
+      .bars { inset: 32px 24px 0; gap: 6px; }
+      .hero .body { padding: 30px 28px; }
+      .hero h2 { font-size: 32px; }
+    }
+    @media (max-width: 600px) {
+      header { padding: 64px 0 40px; }
+      .grid { grid-template-columns: 1fr; }
+      .card.hero { grid-column: span 1; }
+      h1 br { display: none; }
+      .hero .bar { width: 26px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="wrap">
+    <div class="kicker">AlgoView</div>
+    <h1>Algoritmos que você<br><span>vê funcionar.</span></h1>
+    <p class="lede">Simuladores interativos de busca e ordenação. Acompanhe o código linha a linha, compare estratégias lado a lado e veja a diferença entre O(n²) e O(n log n) com um milhão de elementos.</p>
+    <a class="cta" href="laboratorio.html">Abrir o laboratório →</a>
+  </header>
+
+  <main class="wrap">
+    <div class="grid">
+
+      <a class="card hero" href="laboratorio.html">
+        <div class="art" aria-hidden="true"><div class="bars">
+          <i class="bar g" style="height:42%;animation-delay:.05s"></i>
+          <i class="bar" style="height:24%;animation-delay:.1s"></i>
+          <i class="bar o" style="height:74%;animation-delay:.15s"></i>
+          <i class="bar" style="height:14%;animation-delay:.2s"></i>
+          <i class="bar p" style="height:58%;animation-delay:.25s"></i>
+          <i class="bar" style="height:20%;animation-delay:.3s"></i>
+          <i class="bar d" style="height:90%;animation-delay:.35s"></i>
+          <i class="bar g" style="height:34%;animation-delay:.4s"></i>
+        </div></div>
+        <div class="body">
+          <div class="tag">Destaque</div>
+          <h2>Laboratório de Algoritmos</h2>
+          <p>Seis algoritmos de ordenação e quatro de busca. Código com a linha atual em destaque, todas as variáveis, laços e pilha de chamadas. Comparação lado a lado no melhor, médio e pior caso, super velocidade com 1.000.000 de elementos e ranking por cenário.</p>
+          <div class="chips"><span>Bubble</span><span>Selection</span><span>Insertion</span><span>Merge</span><span>Quick</span><span>Heap</span></div>
+          <div class="meta"><span>busca + ordenação</span><span class="open">Abrir →</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="busca-binaria.html">
+        <div class="art cells" aria-hidden="true">
+          <span class="cell out">7</span><span class="cell out">9</span><span class="cell out">16</span><span class="cell">25</span><span class="cell mid">27</span><span class="cell">65</span><span class="cell">83</span>
+          <span class="ptrs">low · mid · high</span>
+        </div>
+        <div class="body">
+          <h2>Busca Binária</h2>
+          <p>Passo a passo com low, mid e high: a cada comparação, metade da lista sai do jogo.</p>
+          <div class="meta"><span>O(log n)</span><span class="open">Abrir →</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="max-consecutive-ones.html">
+        <div class="art cells" aria-hidden="true">
+          <span class="cell one">1</span><span class="cell one">1</span><span class="cell out">0</span><span class="cell hot">1</span><span class="cell hot">1</span><span class="cell hot">1</span><span class="cell out">0</span>
+        </div>
+        <div class="body">
+          <h2>Max Consecutive Ones</h2>
+          <p>A maior sequência de 1s numa só passada, com a sequência atual e o recorde crescendo na tela.</p>
+          <div class="meta"><span>O(n)</span><span class="open">Abrir →</span></div>
+        </div>
+      </a>
+
+      <a class="card" href="fibonacci.html">
+        <div class="art" aria-hidden="true" style="align-items:stretch;padding:24px 26px">
+          <svg viewBox="0 0 220 140" width="100%" height="100%" preserveAspectRatio="none">
+            <path d="M0 136 L150 134 C175 132 190 120 200 95 C208 70 214 40 220 4" fill="none" stroke="#ff375f" stroke-width="4" stroke-linecap="round"/>
+            <path d="M0 136 L220 128" fill="none" stroke="#34c759" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="body">
+          <h2>Fibonacci</h2>
+          <p>Recursão exponencial contra linear: chamadas e tempo de cada abordagem, com o gráfico das duas curvas.</p>
+          <div class="meta"><span>O(2ⁿ) × O(n)</span><span class="open">Abrir →</span></div>
+        </div>
+      </a>
+
+      <a class="card wide" href="corrida-ordenacao.html">
+        <div class="art lanes" aria-hidden="true">
+          <div class="lane"><i style="width:92%;background:var(--orange)"></i></div>
+          <div class="lane"><i style="width:58%;background:var(--pink)"></i></div>
+          <div class="lane"><i style="width:74%;background:var(--purple)"></i></div>
+          <div class="lane"><i style="width:36%;background:var(--teal)"></i></div>
+        </div>
+        <div class="body">
+          <h2>Corrida de Ordenação</h2>
+          <p>Quatro algoritmos ordenando a mesma lista em pistas paralelas, no formato 4:5 para vídeo.</p>
+          <div class="meta"><span class="dark">tema escuro</span><span class="open">Abrir →</span></div>
+        </div>
+      </a>
+
+      <a class="card wide" href="corrida-buscas.html">
+        <div class="art lanes" aria-hidden="true">
+          <div class="lane"><i style="width:100%;background:#8e8e93"></i></div>
+          <div class="lane"><i style="width:70%;background:#8e8e93"></i></div>
+          <div class="lane"><i style="width:22%;background:var(--blue)"></i></div>
+          <div class="lane"><i style="width:22%;background:var(--purple)"></i></div>
+        </div>
+        <div class="body">
+          <h2>Corrida de Buscas</h2>
+          <p>Sequencial, sequencial ordenada, binária e binária recursiva procurando o mesmo valor.</p>
+          <div class="meta"><span class="dark">tema escuro</span><span class="open">Abrir →</span></div>
+        </div>
+      </a>
+
+    </div>
+
+    <section class="about">
+      <h3>Feito para entender, e para gravar.</h3>
+      <p>Cada simulador roda no navegador, sem instalar nada. No laboratório, o palco tem formato 4:5 e roteiros automáticos que viram vídeo com um gravador de tela.</p>
+      <div class="keys">
+        <span><kbd>Espaço</kbd>play / pausa</span>
+        <span><kbd>→</kbd>próximo passo</span>
+        <span><kbd>R</kbd>recomeçar</span>
+        <span><kbd>H</kbd>ocultar controles</span>
+        <span><kbd>M</kbd>som</span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="wrap">
+    HTML, CSS e JavaScript puros · <a href="https://github.com/moises-paschoalick/algoview">código no GitHub</a>
+  </footer>
+</body>
+</html>
