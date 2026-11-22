@@ -3,196 +3,332 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AlgoView — algoritmos que você vê funcionar</title>
-  <meta name="description" content="Simuladores interativos de algoritmos de busca e ordenação: código linha a linha, comparações lado a lado e 1 milhão de elementos em super velocidade." />
+  <title>AlgoView · Simuladores de algoritmos de ordenação e busca</title>
+  <meta name="description" content="Veja Bubble, Merge, Quick e Heap Sort funcionando passo a passo, com o código linha a linha. Compare ordenação e busca binária até 1 milhão de elementos." />
+  <meta name="keywords" content="algoritmos de ordenação, bubble sort, merge sort, quick sort, heap sort, insertion sort, selection sort, busca binária, complexidade de algoritmos, Big O, visualização de algoritmos, estrutura de dados" />
+  <meta name="author" content="Moisés Paschoalick" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#f5f5f7" />
+  <link rel="canonical" href="https://moises-paschoalick.github.io/algoview/" />
+
+  <!-- Compartilhamento (LinkedIn, WhatsApp, X, Slack) -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="AlgoView" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:title" content="AlgoView · Algoritmos que você vê funcionar" />
+  <meta property="og:description" content="Simuladores interativos de ordenação e busca: código linha a linha, comparação lado a lado e 1 milhão de elementos em super velocidade." />
+  <meta property="og:url" content="https://moises-paschoalick.github.io/algoview/" />
+  <meta property="og:image" content="https://moises-paschoalick.github.io/algoview/assets/social.jpg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Seis algoritmos de ordenação lado a lado no AlgoView, com o Quick Sort terminando em primeiro" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="AlgoView · Algoritmos que você vê funcionar" />
+  <meta name="twitter:description" content="Simuladores interativos de ordenação e busca, passo a passo." />
+  <meta name="twitter:image" content="https://moises-paschoalick.github.io/algoview/assets/social.jpg" />
+
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "AlgoView",
+        "url": "https://moises-paschoalick.github.io/algoview/",
+        "inLanguage": "pt-BR",
+        "description": "Simuladores interativos de algoritmos de ordenação e busca.",
+        "author": { "@type": "Person", "name": "Moisés Paschoalick", "url": "https://github.com/moises-paschoalick" }
+      },
+      {
+        "@type": "ItemList",
+        "name": "Simuladores de algoritmos",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Laboratório de Algoritmos", "url": "https://moises-paschoalick.github.io/algoview/laboratorio.html" },
+          { "@type": "ListItem", "position": 2, "name": "Busca Binária", "url": "https://moises-paschoalick.github.io/algoview/busca-binaria.html" },
+          { "@type": "ListItem", "position": 3, "name": "Max Consecutive Ones", "url": "https://moises-paschoalick.github.io/algoview/max-consecutive-ones.html" },
+          { "@type": "ListItem", "position": 4, "name": "Fibonacci: recursão exponencial e linear", "url": "https://moises-paschoalick.github.io/algoview/fibonacci.html" },
+          { "@type": "ListItem", "position": 5, "name": "Corrida de Ordenação", "url": "https://moises-paschoalick.github.io/algoview/corrida-ordenacao.html" },
+          { "@type": "ListItem", "position": 6, "name": "Corrida de Buscas", "url": "https://moises-paschoalick.github.io/algoview/corrida-buscas.html" }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <style>
     :root {
-      --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --secondary: #6e6e73; --tertiary: #aeaeb2;
+      --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --secondary: #6e6e73; --tertiary: #8e8e93;
       --fill: #f2f2f7; --hair: rgba(0,0,0,.08);
       --blue: #0071e3; --orange: #ff9500; --pink: #ff375f; --purple: #af52de; --teal: #30b0c7; --green: #34c759;
       --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
       --mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
       --spring: cubic-bezier(.32, .72, 0, 1);
+      --gutter: 24px;
+      --gap: 24px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+    html { scroll-behavior: smooth; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; line-height: 1.5; }
     a { color: inherit; text-decoration: none; }
-    .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+    .wrap { max-width: 1160px; margin-inline: auto; padding-inline: var(--gutter); }
+    :focus-visible { outline: 3px solid var(--blue); outline-offset: 3px; border-radius: 12px; }
 
-    header { padding: 96px 0 56px; text-align: center; }
-    .kicker { font-size: 15px; font-weight: 600; color: var(--blue); letter-spacing: -.01em; margin-bottom: 14px; }
-    h1 { font-size: clamp(44px, 7vw, 80px); font-weight: 700; letter-spacing: -.045em; line-height: 1.02; }
+    /* barra de navegação */
+    .nav { position: sticky; top: 0; z-index: 10; background: rgba(245,245,247,.78); backdrop-filter: saturate(1.8) blur(20px); -webkit-backdrop-filter: saturate(1.8) blur(20px); border-bottom: 1px solid var(--hair); }
+    .nav .wrap { height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 17px; font-weight: 700; letter-spacing: -.02em; }
+    .logo img { width: 28px; height: 28px; }
+    .nav-links { display: flex; gap: 26px; font-size: 14px; color: var(--secondary); }
+    .nav-links a:hover { color: var(--text); }
+
+    /* abertura */
+    .hero-head { padding-block: 112px 80px; text-align: center; }
+    .kicker { font-size: 15px; font-weight: 600; color: var(--blue); margin-bottom: 18px; }
+    h1 { font-size: clamp(42px, 7vw, 80px); font-weight: 700; letter-spacing: -.045em; line-height: 1.04; }
     h1 span { background: linear-gradient(90deg, var(--blue), var(--purple) 55%, var(--pink)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .lede { max-width: 620px; margin: 22px auto 0; font-size: clamp(18px, 2.2vw, 22px); line-height: 1.45; color: var(--secondary); letter-spacing: -.01em; }
-    .cta { display: inline-flex; align-items: center; gap: 8px; margin-top: 34px; background: var(--blue); color: #fff; font-size: 17px; font-weight: 600; padding: 14px 26px; border-radius: 99px; box-shadow: 0 10px 24px -10px var(--blue); transition: transform .4s var(--spring), background .2s; }
-    .cta:hover { transform: scale(1.04); background: #0077ed; }
+    .lede { max-width: 640px; margin: 28px auto 0; font-size: clamp(18px, 2.2vw, 21px); line-height: 1.5; color: var(--secondary); letter-spacing: -.01em; }
+    .actions { margin-top: 40px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .cta { display: inline-flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; padding: 14px 26px; border-radius: 99px; transition: transform .4s var(--spring), background .2s, box-shadow .2s; }
+    .cta.primary { background: var(--blue); color: #fff; box-shadow: 0 10px 24px -10px var(--blue); }
+    .cta.primary:hover { transform: scale(1.04); background: #0077ed; }
+    .cta.ghost { color: var(--blue); }
+    .cta.ghost:hover { background: rgba(0,113,227,.08); }
 
-    .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 20px; padding-bottom: 40px; }
+    /* seções */
+    section { scroll-margin-top: 72px; }
+    .sec-title { text-align: center; margin-bottom: 40px; }
+    .sec-title h2 { font-size: clamp(28px, 4vw, 40px); font-weight: 700; letter-spacing: -.035em; line-height: 1.1; }
+    .sec-title p { margin-top: 12px; font-size: 17px; color: var(--secondary); }
+
+    /* grade de simuladores */
+    .grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: var(--gap); }
     .card { grid-column: span 2; background: var(--card); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 12px 32px -16px rgba(0,0,0,.12); transition: transform .5s var(--spring), box-shadow .5s var(--spring); }
     .card:hover { transform: translateY(-6px); box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 28px 50px -22px rgba(0,0,0,.22); }
     .card.wide { grid-column: span 3; }
-    .card.hero { grid-column: span 6; flex-direction: row; min-height: 380px; }
-    .art { background: var(--fill); height: 190px; display: flex; align-items: flex-end; justify-content: center; gap: 6px; padding: 28px 28px 0; position: relative; }
+    .card.hero { grid-column: span 6; flex-direction: row; min-height: 420px; }
+    .art { background: var(--fill); height: 200px; display: flex; align-items: flex-end; justify-content: center; gap: 6px; padding: 28px 28px 0; position: relative; flex: none; }
     .hero .art { height: auto; flex: 1.15; padding: 0; background: linear-gradient(160deg, #eef4ff, #f6f0ff); }
-    .body { padding: 24px 26px 26px; display: flex; flex-direction: column; flex: 1; }
-    .hero .body { padding: 48px 44px; justify-content: center; }
-    .tag { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 8px; }
-    h2 { font-size: 24px; font-weight: 700; letter-spacing: -.03em; }
-    .hero h2 { font-size: 40px; letter-spacing: -.04em; line-height: 1.05; }
-    .body p { margin-top: 10px; font-size: 15.5px; line-height: 1.5; color: var(--secondary); }
-    .hero .body p { font-size: 18px; }
-    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; }
+    .body { padding: 28px 30px 30px; display: flex; flex-direction: column; flex: 1; }
+    .hero .body { padding: 56px 52px; justify-content: center; }
+    .tag { font-size: 13px; font-weight: 600; color: var(--blue); margin-bottom: 10px; }
+    .card h3 { font-size: 24px; font-weight: 700; letter-spacing: -.03em; line-height: 1.15; }
+    .hero h3 { font-size: 40px; letter-spacing: -.04em; line-height: 1.05; }
+    .body p { margin-top: 12px; font-size: 15.5px; line-height: 1.55; color: var(--secondary); }
+    .hero .body p { font-size: 18px; margin-top: 16px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 22px; }
     .chips span { font-size: 12.5px; font-weight: 500; background: var(--fill); color: var(--text); padding: 5px 11px; border-radius: 99px; }
-    .meta { margin-top: auto; padding-top: 18px; display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 13px; color: var(--tertiary); font-variant-ligatures: none; }
+    .meta { margin-top: auto; padding-top: 24px; display: flex; justify-content: space-between; align-items: center; font-family: var(--mono); font-size: 13px; color: var(--tertiary); font-variant-ligatures: none; }
     .open { font-family: var(--sans); font-size: 15px; font-weight: 600; color: var(--blue); }
     .card:hover .open { text-decoration: underline; }
     .dark { font-family: var(--sans); font-size: 12px; font-weight: 600; color: #fff; background: #1d1d1f; padding: 3px 9px; border-radius: 99px; }
 
     /* ilustrações */
-    .bars { position: absolute; inset: 48px 48px 0; display: flex; align-items: flex-end; justify-content: center; gap: 10px; }
+    .bars { position: absolute; inset: 56px 56px 0; display: flex; align-items: flex-end; justify-content: center; gap: 12px; }
     .bar { width: 26px; border-radius: 9px 9px 0 0; background: #d1d1d6; animation: grow 1.2s var(--spring) both; }
-    .hero .bar { width: 46px; border-radius: 14px 14px 0 0; }
+    .hero .bar { width: 48px; border-radius: 14px 14px 0 0; }
     .bar.o { background: var(--orange); } .bar.p { background: var(--pink); } .bar.g { background: #8e8e93; } .bar.d { background: #48484a; }
     @keyframes grow { from { transform: scaleY(.05); transform-origin: bottom; } to { transform: scaleY(1); transform-origin: bottom; } }
     .cells { align-items: center; padding-bottom: 28px; gap: 5px; }
     .cell { width: 34px; height: 34px; border-radius: 10px; background: #fff; display: flex; align-items: center; justify-content: center; font: 600 13px var(--mono); color: var(--secondary); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
     .cell.out { opacity: .3; } .cell.mid { background: var(--blue); color: #fff; } .cell.one { background: #1d1d1f; color: #fff; } .cell.hot { background: var(--green); color: #fff; }
-    .ptrs { position: absolute; left: 0; right: 0; bottom: 30px; text-align: center; font: 600 12px var(--mono); color: var(--blue); }
-    .lanes { flex-direction: column; align-items: stretch; justify-content: center; padding: 26px 30px; gap: 12px; background: #16161a; }
+    .ptrs { position: absolute; left: 0; right: 0; bottom: 34px; text-align: center; font: 600 12px var(--mono); color: var(--blue); }
+    .lanes { flex-direction: column; align-items: stretch; justify-content: center; padding: 28px 32px; gap: 14px; background: #16161a; }
     .lane { height: 12px; border-radius: 99px; background: #2c2c30; overflow: hidden; }
     .lane i { display: block; height: 100%; border-radius: 99px; animation: run 2.4s var(--spring) both; }
     @keyframes run { from { width: 0; } }
 
-    .about { text-align: center; padding: 56px 0 24px; color: var(--secondary); }
-    .about h3 { font-size: 28px; font-weight: 700; letter-spacing: -.03em; color: var(--text); }
-    .about p { max-width: 640px; margin: 12px auto 0; font-size: 17px; line-height: 1.55; }
-    .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 18px; margin-top: 22px; font-size: 14px; }
-    kbd { font: 600 12px var(--sans); background: #fff; border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 6px; padding: 2px 7px; margin-right: 4px; color: var(--text); }
-    footer { text-align: center; padding: 40px 0 56px; font-size: 13px; color: var(--tertiary); }
+    /* o que você aprende */
+    .learn { padding-block: 120px 0; }
+    .points { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--gap); }
+    .point { background: var(--card); border-radius: 24px; padding: 30px; box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 12px 32px -18px rgba(0,0,0,.10); }
+    .point .ico { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; color: #fff; margin-bottom: 18px; }
+    .point h3 { font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+    .point p { margin-top: 8px; font-size: 15px; line-height: 1.55; color: var(--secondary); }
+
+    /* gravar */
+    .record { padding-block: 120px 0; text-align: center; }
+    .record p.lead { max-width: 640px; margin: 0 auto; font-size: 17px; line-height: 1.6; color: var(--secondary); }
+    .keys { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 22px; margin-top: 28px; font-size: 14px; color: var(--secondary); }
+    kbd { font: 600 12px var(--sans); background: #fff; border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 6px; padding: 2px 7px; margin-right: 6px; color: var(--text); }
+
+    footer { margin-top: 120px; border-top: 1px solid var(--hair); }
+    footer .wrap { padding-block: 32px 48px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--tertiary); }
     footer a { color: var(--secondary); } footer a:hover { color: var(--blue); }
 
-    @media (max-width: 900px) {
+    @media (max-width: 960px) {
       .grid { grid-template-columns: 1fr 1fr; }
       .card, .card.wide { grid-column: span 1; }
       .card.hero { grid-column: span 2; flex-direction: column; }
-      .hero .art { min-height: 240px; }
-      .bars { inset: 32px 24px 0; gap: 6px; }
-      .hero .body { padding: 30px 28px; }
-      .hero h2 { font-size: 32px; }
+      .hero .art { min-height: 260px; }
+      .bars { inset: 36px 28px 0; gap: 8px; }
+      .hero .body { padding: 36px 32px 34px; }
+      .hero h3 { font-size: 32px; }
+      .points { grid-template-columns: 1fr; }
     }
-    @media (max-width: 600px) {
-      header { padding: 64px 0 40px; }
+    @media (max-width: 640px) {
+      :root { --gutter: 18px; --gap: 18px; }
+      .nav-links { display: none; }
+      .hero-head { padding-block: 72px 56px; }
+      h1 br { display: none; }
       .grid { grid-template-columns: 1fr; }
       .card.hero { grid-column: span 1; }
-      h1 br { display: none; }
       .hero .bar { width: 26px; }
+      .learn, .record { padding-top: 88px; }
+      footer { margin-top: 88px; }
     }
-    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
   </style>
 </head>
 <body>
-  <header class="wrap">
-    <div class="kicker">AlgoView</div>
-    <h1>Algoritmos que você<br><span>vê funcionar.</span></h1>
-    <p class="lede">Simuladores interativos de busca e ordenação. Acompanhe o código linha a linha, compare estratégias lado a lado e veja a diferença entre O(n²) e O(n log n) com um milhão de elementos.</p>
-    <a class="cta" href="laboratorio.html">Abrir o laboratório →</a>
+  <nav class="nav" aria-label="Principal">
+    <div class="wrap">
+      <a class="logo" href="./"><img src="assets/icon.svg" alt="" width="28" height="28" />AlgoView</a>
+      <div class="nav-links">
+        <a href="#simuladores">Simuladores</a>
+        <a href="#aprenda">O que você aprende</a>
+        <a href="https://github.com/moises-paschoalick/algoview">GitHub</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="wrap hero-head">
+    <div class="kicker">Simuladores de algoritmos</div>
+    <h1>Algoritmos que você <br><span>vê funcionar.</span></h1>
+    <p class="lede">Simuladores interativos de ordenação e busca. Acompanhe o código linha a linha, compare estratégias lado a lado e veja a diferença entre O(n²) e O(n log n) com um milhão de elementos.</p>
+    <div class="actions">
+      <a class="cta primary" href="laboratorio.html">Abrir o laboratório →</a>
+      <a class="cta ghost" href="#simuladores">Ver todos os simuladores</a>
+    </div>
   </header>
 
-  <main class="wrap">
-    <div class="grid">
+  <main>
+    <section id="simuladores" class="wrap" aria-labelledby="t-sim">
+      <h2 id="t-sim" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">Simuladores</h2>
+      <div class="grid">
 
-      <a class="card hero" href="laboratorio.html">
-        <div class="art" aria-hidden="true"><div class="bars">
-          <i class="bar g" style="height:42%;animation-delay:.05s"></i>
-          <i class="bar" style="height:24%;animation-delay:.1s"></i>
-          <i class="bar o" style="height:74%;animation-delay:.15s"></i>
-          <i class="bar" style="height:14%;animation-delay:.2s"></i>
-          <i class="bar p" style="height:58%;animation-delay:.25s"></i>
-          <i class="bar" style="height:20%;animation-delay:.3s"></i>
-          <i class="bar d" style="height:90%;animation-delay:.35s"></i>
-          <i class="bar g" style="height:34%;animation-delay:.4s"></i>
-        </div></div>
-        <div class="body">
-          <div class="tag">Destaque</div>
-          <h2>Laboratório de Algoritmos</h2>
-          <p>Seis algoritmos de ordenação e quatro de busca. Código com a linha atual em destaque, todas as variáveis, laços e pilha de chamadas. Comparação lado a lado no melhor, médio e pior caso, super velocidade com 1.000.000 de elementos e ranking por cenário.</p>
-          <div class="chips"><span>Bubble</span><span>Selection</span><span>Insertion</span><span>Merge</span><span>Quick</span><span>Heap</span></div>
-          <div class="meta"><span>busca + ordenação</span><span class="open">Abrir →</span></div>
-        </div>
-      </a>
+        <a class="card hero" href="laboratorio.html">
+          <div class="art" aria-hidden="true"><div class="bars">
+            <i class="bar g" style="height:42%;animation-delay:.05s"></i>
+            <i class="bar" style="height:24%;animation-delay:.1s"></i>
+            <i class="bar o" style="height:74%;animation-delay:.15s"></i>
+            <i class="bar" style="height:14%;animation-delay:.2s"></i>
+            <i class="bar p" style="height:58%;animation-delay:.25s"></i>
+            <i class="bar" style="height:20%;animation-delay:.3s"></i>
+            <i class="bar d" style="height:90%;animation-delay:.35s"></i>
+            <i class="bar g" style="height:34%;animation-delay:.4s"></i>
+          </div></div>
+          <div class="body">
+            <div class="tag">Destaque</div>
+            <h3>Laboratório de Algoritmos</h3>
+            <p>Seis algoritmos de ordenação e quatro de busca. Código com a linha atual em destaque, todas as variáveis, laços e pilha de chamadas. Comparação lado a lado no melhor, médio e pior caso, super velocidade com 1.000.000 de elementos e ranking por cenário.</p>
+            <div class="chips"><span>Bubble Sort</span><span>Selection Sort</span><span>Insertion Sort</span><span>Merge Sort</span><span>Quick Sort</span><span>Heap Sort</span></div>
+            <div class="meta"><span>ordenação + busca</span><span class="open">Abrir →</span></div>
+          </div>
+        </a>
 
-      <a class="card" href="busca-binaria.html">
-        <div class="art cells" aria-hidden="true">
-          <span class="cell out">7</span><span class="cell out">9</span><span class="cell out">16</span><span class="cell">25</span><span class="cell mid">27</span><span class="cell">65</span><span class="cell">83</span>
-          <span class="ptrs">low · mid · high</span>
-        </div>
-        <div class="body">
-          <h2>Busca Binária</h2>
-          <p>Passo a passo com low, mid e high: a cada comparação, metade da lista sai do jogo.</p>
-          <div class="meta"><span>O(log n)</span><span class="open">Abrir →</span></div>
-        </div>
-      </a>
+        <a class="card" href="busca-binaria.html">
+          <div class="art cells" aria-hidden="true">
+            <span class="cell out">7</span><span class="cell out">9</span><span class="cell out">16</span><span class="cell">25</span><span class="cell mid">27</span><span class="cell">65</span><span class="cell">83</span>
+            <span class="ptrs">low · mid · high</span>
+          </div>
+          <div class="body">
+            <h3>Busca Binária</h3>
+            <p>Passo a passo com low, mid e high: a cada comparação, metade da lista sai do jogo.</p>
+            <div class="meta"><span>O(log n)</span><span class="open">Abrir →</span></div>
+          </div>
+        </a>
 
-      <a class="card" href="max-consecutive-ones.html">
-        <div class="art cells" aria-hidden="true">
-          <span class="cell one">1</span><span class="cell one">1</span><span class="cell out">0</span><span class="cell hot">1</span><span class="cell hot">1</span><span class="cell hot">1</span><span class="cell out">0</span>
-        </div>
-        <div class="body">
-          <h2>Max Consecutive Ones</h2>
-          <p>A maior sequência de 1s numa só passada, com a sequência atual e o recorde crescendo na tela.</p>
-          <div class="meta"><span>O(n)</span><span class="open">Abrir →</span></div>
-        </div>
-      </a>
+        <a class="card" href="max-consecutive-ones.html">
+          <div class="art cells" aria-hidden="true">
+            <span class="cell one">1</span><span class="cell one">1</span><span class="cell out">0</span><span class="cell hot">1</span><span class="cell hot">1</span><span class="cell hot">1</span><span class="cell out">0</span>
+          </div>
+          <div class="body">
+            <h3>Max Consecutive Ones</h3>
+            <p>A maior sequência de 1s numa só passada, com a sequência atual e o recorde crescendo na tela.</p>
+            <div class="meta"><span>O(n)</span><span class="open">Abrir →</span></div>
+          </div>
+        </a>
 
-      <a class="card" href="fibonacci.html">
-        <div class="art" aria-hidden="true" style="align-items:stretch;padding:24px 26px">
-          <svg viewBox="0 0 220 140" width="100%" height="100%" preserveAspectRatio="none">
-            <path d="M0 136 L150 134 C175 132 190 120 200 95 C208 70 214 40 220 4" fill="none" stroke="#ff375f" stroke-width="4" stroke-linecap="round"/>
-            <path d="M0 136 L220 128" fill="none" stroke="#34c759" stroke-width="4" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div class="body">
-          <h2>Fibonacci</h2>
-          <p>Recursão exponencial contra linear: chamadas e tempo de cada abordagem, com o gráfico das duas curvas.</p>
-          <div class="meta"><span>O(2ⁿ) × O(n)</span><span class="open">Abrir →</span></div>
-        </div>
-      </a>
+        <a class="card" href="fibonacci.html">
+          <div class="art" aria-hidden="true" style="align-items:stretch;padding:26px 28px">
+            <svg viewBox="0 0 220 140" width="100%" height="100%" preserveAspectRatio="none">
+              <path d="M0 136 L150 134 C175 132 190 120 200 95 C208 70 214 40 220 4" fill="none" stroke="#ff375f" stroke-width="4" stroke-linecap="round"/>
+              <path d="M0 136 L220 128" fill="none" stroke="#34c759" stroke-width="4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="body">
+            <h3>Fibonacci</h3>
+            <p>Recursão exponencial contra linear: chamadas e tempo de cada abordagem, com o gráfico das duas curvas.</p>
+            <div class="meta"><span>O(2ⁿ) × O(n)</span><span class="open">Abrir →</span></div>
+          </div>
+        </a>
 
-      <a class="card wide" href="corrida-ordenacao.html">
-        <div class="art lanes" aria-hidden="true">
-          <div class="lane"><i style="width:92%;background:var(--orange)"></i></div>
-          <div class="lane"><i style="width:58%;background:var(--pink)"></i></div>
-          <div class="lane"><i style="width:74%;background:var(--purple)"></i></div>
-          <div class="lane"><i style="width:36%;background:var(--teal)"></i></div>
-        </div>
-        <div class="body">
-          <h2>Corrida de Ordenação</h2>
-          <p>Quatro algoritmos ordenando a mesma lista em pistas paralelas, no formato 4:5 para vídeo.</p>
-          <div class="meta"><span class="dark">tema escuro</span><span class="open">Abrir →</span></div>
-        </div>
-      </a>
+        <a class="card wide" href="corrida-ordenacao.html">
+          <div class="art lanes" aria-hidden="true">
+            <div class="lane"><i style="width:92%;background:var(--orange)"></i></div>
+            <div class="lane"><i style="width:58%;background:var(--pink)"></i></div>
+            <div class="lane"><i style="width:74%;background:var(--purple)"></i></div>
+            <div class="lane"><i style="width:36%;background:var(--teal)"></i></div>
+          </div>
+          <div class="body">
+            <h3>Corrida de Ordenação</h3>
+            <p>Quatro algoritmos ordenando a mesma lista em pistas paralelas, no formato 4:5 para vídeo.</p>
+            <div class="meta"><span class="dark">tema escuro</span><span class="open">Abrir →</span></div>
+          </div>
+        </a>
 
-      <a class="card wide" href="corrida-buscas.html">
-        <div class="art lanes" aria-hidden="true">
-          <div class="lane"><i style="width:100%;background:#8e8e93"></i></div>
-          <div class="lane"><i style="width:70%;background:#8e8e93"></i></div>
-          <div class="lane"><i style="width:22%;background:var(--blue)"></i></div>
-          <div class="lane"><i style="width:22%;background:var(--purple)"></i></div>
-        </div>
-        <div class="body">
-          <h2>Corrida de Buscas</h2>
-          <p>Sequencial, sequencial ordenada, binária e binária recursiva procurando o mesmo valor.</p>
-          <div class="meta"><span class="dark">tema escuro</span><span class="open">Abrir →</span></div>
-        </div>
-      </a>
+        <a class="card wide" href="corrida-buscas.html">
+          <div class="art lanes" aria-hidden="true">
+            <div class="lane"><i style="width:100%;background:#8e8e93"></i></div>
+            <div class="lane"><i style="width:70%;background:#8e8e93"></i></div>
+            <div class="lane"><i style="width:22%;background:var(--blue)"></i></div>
+            <div class="lane"><i style="width:22%;background:var(--purple)"></i></div>
+          </div>
+          <div class="body">
+            <h3>Corrida de Buscas</h3>
+            <p>Busca sequencial, sequencial ordenada, binária e binária recursiva procurando o mesmo valor.</p>
+            <div class="meta"><span class="dark">tema escuro</span><span class="open">Abrir →</span></div>
+          </div>
+        </a>
 
-    </div>
+      </div>
+    </section>
 
-    <section class="about">
-      <h3>Feito para entender, e para gravar.</h3>
-      <p>Cada simulador roda no navegador, sem instalar nada. No laboratório, o palco tem formato 4:5 e roteiros automáticos que viram vídeo com um gravador de tela.</p>
+    <section id="aprenda" class="wrap learn" aria-labelledby="t-learn">
+      <div class="sec-title">
+        <h2 id="t-learn">O que você aprende</h2>
+        <p>Do código ao custo real de cada escolha.</p>
+      </div>
+      <div class="points">
+        <div class="point">
+          <div class="ico" style="background:var(--blue)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6l-6 6 6 6M16 6l6 6-6 6"/></svg></div>
+          <h3>O código, linha a linha</h3>
+          <p>A linha que está rodando fica em destaque, junto com o valor de cada variável, o índice de cada laço e a pilha de chamadas da recursão.</p>
+        </div>
+        <div class="point">
+          <div class="ico" style="background:var(--orange)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div>
+          <h3>Melhor, médio e pior caso</h3>
+          <p>A mesma lista para todos, já ordenada, aleatória ou invertida. Fica claro por que o Insertion brilha em lista quase pronta e o Quick sofre com o pivô errado.</p>
+        </div>
+        <div class="point">
+          <div class="ico" style="background:var(--purple)"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div>
+          <h3>O peso do Big O</h3>
+          <p>Com 1.000.000 de elementos no mesmo ritmo, o Quick Sort termina em 3 segundos. O Bubble Sort levaria mais de 16 horas.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="wrap record" aria-labelledby="t-rec">
+      <div class="sec-title">
+        <h2 id="t-rec">Feito para entender, e para gravar.</h2>
+      </div>
+      <p class="lead">Cada simulador roda no navegador, sem instalar nada. No laboratório, o palco tem formato 4:5 e roteiros automáticos que viram vídeo com um gravador de tela.</p>
       <div class="keys">
         <span><kbd>Espaço</kbd>play / pausa</span>
         <span><kbd>→</kbd>próximo passo</span>
@@ -203,8 +339,11 @@
     </section>
   </main>
 
-  <footer class="wrap">
-    HTML, CSS e JavaScript puros · <a href="https://github.com/moises-paschoalick/algoview">código no GitHub</a>
+  <footer>
+    <div class="wrap">
+      <span>AlgoView · HTML, CSS e JavaScript puros</span>
+      <span><a href="https://github.com/moises-paschoalick/algoview">Código no GitHub</a></span>
+    </div>
   </footer>
 </body>
 </html>
