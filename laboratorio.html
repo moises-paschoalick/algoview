@@ -169,6 +169,7 @@
     .meta { margin-top: 8px; font-size: 20px; color: var(--secondary); letter-spacing: -.01em; }
     .meta .m + .m::before { content: '·'; margin: 0 10px; color: var(--tertiary); }
     .meta .mono { font-family: var(--mono); font-size: 18px; }
+    #stepPill .step-link { margin-left: 12px; vertical-align: 3px; }
 
     .segmented { display: flex; padding: 4px; border-radius: 99px; background: rgba(118,118,128,.12); margin-bottom: 8px; }
     .seg { font-size: 15px; font-weight: 500; padding: 7px 12px; border-radius: 99px; color: var(--secondary); transition: all .4s var(--spring); display: flex; align-items: center; gap: 6px; }
@@ -286,7 +287,7 @@
     .rcard { padding: 22px 26px 0; display: flex; flex-direction: column; position: relative; overflow: hidden; transition: box-shadow .5s ease; }
     .rcard-head { display: flex; align-items: center; gap: 10px; }
     .rcard-name { font-size: 27px; font-weight: 700; letter-spacing: -.03em; }
-    .rcard-bigo { font-family: var(--mono); font-size: 14px; color: var(--tertiary); font-variant-ligatures: none; }
+    .rcard-bigo { font-family: var(--mono); font-size: 14px; color: var(--tertiary); font-variant-ligatures: none; white-space: nowrap; }
     .rcard .medal { margin-left: auto; transform: scale(0); }
     .rcard.done .medal { transform: scale(1); }
     .rbars { height: 176px; margin-top: 12px; }
@@ -307,6 +308,9 @@
     .win-tag { font-size: 14px; font-weight: 600; color: #fff; background: var(--blue); padding: 3px 12px; border-radius: 99px; white-space: nowrap; opacity: 0; transform: scale(.7); transition: all .6s var(--spring); }
     .rcard.first .win-tag { opacity: 1; transform: none; }
     .rcard-bigo.good { color: var(--green); font-weight: 600; }
+    /* link para o painel linha a linha (só o Merge Sort tem por enquanto) */
+    .step-link { font: 600 13px var(--sans); color: var(--blue); text-decoration: none; background: color-mix(in srgb, var(--blue) 9%, transparent); padding: 3px 10px; border-radius: 99px; white-space: nowrap; transition: background .2s; }
+    .step-link:hover { background: color-mix(in srgb, var(--blue) 16%, transparent); }
     .rcard-bigo.bad { color: var(--pink); font-weight: 600; }
     .race-foot { padding: 22px 6px 0; }
     /* ── Área de cartões: rolagem + zoom + adicionar algoritmo ── */
@@ -526,7 +530,7 @@
             <div class="kicker">Ordenação</div>
             <div class="title" id="algoTitle">Bubble Sort</div>
             <div class="meta">
-              <span class="m" id="scnPill">Aleatória</span><span class="m" id="nPill">8 elementos</span><span class="m mono" id="bigoPill">O(n²)</span>
+              <span class="m" id="scnPill">Aleatória</span><span class="m" id="nPill">8 elementos</span><span class="m mono" id="bigoPill">O(n²)</span><span id="stepPill"></span>
             </div>
           </div>
           <div class="segmented" id="algoTabs"></div>
@@ -1347,6 +1351,7 @@ function setAlgoUI() {
   $('view-explore').style.setProperty('--algo', A.color);
   $('algoTitle').textContent = A.name;
   $('bigoPill').textContent = A.bigo;
+  $('stepPill').innerHTML = stepLink(st.algo);
   $('scnPill').textContent = SCN[st.scn].name;
   $('nPill').textContent = `${st.vals.length} elementos`;
   $('algoTabs').innerHTML = ALGO_IDS.map((id) =>
@@ -1604,6 +1609,8 @@ const caseOf = (scn) => Object.keys(CASES).find((k) => CASES[k].scn === scn) || 
 const raceInput = (scn, n = Number($('sizeSel').value)) => (scn === 'random' && n === 8 ? DEMO : makeInput(scn, n));
 const race = { vals: [], scn: 'random', tick: 0, timer: null, runs: {}, pos: {}, slots: {}, max: 0 };
 const short = (a) => ALGOS[a].name.replace(' Sort', '');
+const STEP_PAGE = { merge: 'merge-sort.html' };
+const stepLink = (a) => STEP_PAGE[a] ? `<a class="step-link" href="${STEP_PAGE[a]}" title="Abrir o ${ALGOS[a].name} linha a linha, com a árvore de divisões e a pilha de chamadas">passo a passo →</a>` : '';
 
 // Quais algoritmos estão nos cartões (Comparar e Super) e o zoom da área de cartões
 let PICK = ['bubble', 'insertion', 'merge', 'quick'], zoomZ = 1;
@@ -1676,7 +1683,7 @@ function raceLoad(vals = race.vals, scn = race.scn) {
   const cs = caseOf(scn);
   $('raceGrid').innerHTML = PICK.map((a) => `
     <div class="card rcard" id="rc-${a}">
-      <div class="rcard-head"><span class="rm" data-rm="${a}" title="Remover">×</span><span class="rcard-name">${short(a)}</span><span class="rcard-bigo ${cs && CASE_O[a][cs] === 'O(n)' ? 'good' : cs && a === 'quick' && cs !== 'avg' ? 'bad' : ''}">${cs ? CASE_O[a][cs] : ALGOS[a].bigo}</span><span class="win-tag">ordenou primeiro</span><span class="medal" id="rm-${a}"></span></div>
+      <div class="rcard-head"><span class="rm" data-rm="${a}" title="Remover">×</span><span class="rcard-name">${short(a)}</span><span class="rcard-bigo ${cs && CASE_O[a][cs] === 'O(n)' ? 'good' : cs && a === 'quick' && cs !== 'avg' ? 'bad' : ''}">${cs ? CASE_O[a][cs] : ALGOS[a].bigo}</span>${stepLink(a)}<span class="win-tag">ordenou primeiro</span><span class="medal" id="rm-${a}"></span></div>
       <div class="bars rbars" id="rb-${a}"></div>
       <div class="rcard-foot"><span><b id="rcmp-${a}">0</b>comparações</span><span><b id="rmov-${a}">0</b>movimentos</span></div>
       <div class="prog" id="rp-${a}"></div>
@@ -2197,7 +2204,7 @@ function supLoad(n = sup.n, kase = sup.kase) {
       <span class="rm" data-rm="${a}" title="Remover">×</span>
       <div class="srow-info">
         <div class="rcard-head"><span class="rcard-name">${short(a)}</span><span class="medal" id="um-${a}"></span></div>
-        <div class="srow-sub"><span class="rcard-bigo ${CASE_O[a][kase] === 'O(n)' ? 'good' : a === 'quick' && kase !== 'avg' ? 'bad' : ''}">${CASE_O[a][kase]}</span><span class="win-tag">mais rápido</span></div>
+        <div class="srow-sub"><span class="rcard-bigo ${CASE_O[a][kase] === 'O(n)' ? 'good' : a === 'quick' && kase !== 'avg' ? 'bad' : ''}">${CASE_O[a][kase]}</span>${stepLink(a)}<span class="win-tag">mais rápido</span></div>
         <div class="srow-time" id="ut-${a}">0,0 s</div>
         <div class="srow-ops"><b id="uops-${a}">0</b> operações</div>
         <div class="sup-note" id="un-${a}"></div>
