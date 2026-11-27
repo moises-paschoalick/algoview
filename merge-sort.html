@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Merge Sort passo a passo · AlgoView</title>
+  <meta name="description" content="Merge Sort linha a linha: a árvore de divisões e merges, o código com a linha atual em destaque, as variáveis e a pilha de chamadas da recursão." />
+  <link rel="canonical" href="https://moises-paschoalick.github.io/algoview/merge-sort.html" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="AlgoView" />
+  <meta property="og:locale" content="pt_BR" />
+  <meta property="og:title" content="Merge Sort passo a passo · AlgoView" />
+  <meta property="og:description" content="Divide, chega no caso base e intercala de volta: o Merge Sort executado linha a linha, com a árvore de chamadas na tela." />
+  <meta property="og:url" content="https://moises-paschoalick.github.io/algoview/merge-sort.html" />
+  <meta property="og:image" content="https://moises-paschoalick.github.io/algoview/assets/social.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #f5f5f7; --card: #fff; --text: #1d1d1f; --secondary: #6e6e73; --tertiary: #aeaeb2;
+      --fill: #f2f2f7; --hair: rgba(0,0,0,.08);
+      --blue: #0071e3; --orange: #ff9500; --purple: #af52de; --teal: #30b0c7; --indigo: #5856d6; --pink: #ff375f; --green: #34c759;
+      /* uma cor por variável: a mesma no código, nas variáveis e na árvore */
+      --v-i: var(--blue); --v-j: var(--orange); --v-k: var(--teal); --v-mid: var(--indigo); --v-lr: #636366;
+      --sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      --mono: 'SF Mono', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+      --spring: cubic-bezier(.32, .72, 0, 1);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; font-feature-settings: 'tnum'; min-height: 100vh; }
+
+    /* ── barra de controle ── */
+    .toolbar {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap;
+      padding: 8px 12px; background: rgba(255,255,255,.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--hair); font-size: 12.5px;
+    }
+    body.clean .toolbar, body.clean .timeline { display: none; }
+    .toolbar .sep { width: 1px; height: 18px; background: var(--hair); margin: 0 3px; }
+    .toolbar label { color: var(--secondary); }
+    .toolbar input[type=range] { width: 80px; accent-color: var(--blue); }
+    .toolbar input[type=text] { width: 190px; padding: 5px 9px; border: 1px solid var(--hair); border-radius: 99px; font: 500 12.5px var(--mono); background: #fff; color: var(--text); }
+    .toolbar input[type=text].bad { border-color: var(--pink); }
+    .toolbar select { padding: 4px 6px; border: 1px solid var(--hair); border-radius: 8px; background: #fff; color: var(--text); font: inherit; }
+    .btn { padding: 5px 11px; border: none; border-radius: 99px; cursor: pointer; background: var(--fill); color: var(--text); font: inherit; font-weight: 500; white-space: nowrap; }
+    .btn:hover:not(:disabled) { background: #e5e5ea; }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .btn.primary { background: var(--blue); color: #fff; min-width: 74px; }
+    .btn.primary:hover:not(:disabled) { background: #0077ed; }
+    .btn.on { background: var(--text); color: #fff; }
+    .hint { color: var(--tertiary); font-size: 11.5px; }
+    .err { color: var(--pink); font-size: 11.5px; }
+
+    .timeline { display: flex; align-items: center; gap: 12px; max-width: 1480px; margin: 12px auto 0; padding: 0 16px; font: 500 12px var(--mono); color: var(--secondary); }
+    .timeline input { flex: 1; accent-color: var(--blue); }
+
+    /* ── layout ── */
+    .main { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(340px, 1fr); gap: 16px; padding: 12px 16px 24px; max-width: 1480px; margin: 0 auto; align-items: start; }
+    .card { background: var(--card); border-radius: 22px; box-shadow: 0 1px 1px rgba(0,0,0,.02), 0 12px 32px -18px rgba(0,0,0,.14); }
+    .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--tertiary); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: baseline; }
+    .side { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+
+    /* ── palco ── */
+    .stage { padding: 22px 24px 26px; min-width: 0; }
+    .head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+    .head h1 { font-size: 26px; font-weight: 700; letter-spacing: -.035em; }
+    .head h1 span { color: var(--secondary); font-weight: 500; font-size: 17px; letter-spacing: -.01em; margin-left: 6px; }
+    .back { display: inline-block; margin-bottom: 6px; font-size: 13px; font-weight: 600; color: var(--blue); text-decoration: none; }
+    .back:hover { text-decoration: underline; }
+    .stats { display: flex; gap: 16px; font: 500 12px var(--mono); color: var(--secondary); }
+    .stats b { color: var(--text); font-weight: 600; }
+
+    .narr {
+      min-height: 76px; padding: 14px 18px; border-radius: 16px; background: var(--fill);
+      font-size: 16px; line-height: 1.5; letter-spacing: -.005em; display: flex; align-items: center; gap: 12px;
+    }
+    .narr .ln-tag { flex: none; font: 600 11.5px var(--mono); color: #fff; background: var(--text); border-radius: 8px; padding: 4px 8px; }
+    .narr b { font-weight: 650; }
+
+    /* array real em memória */
+    .mem { margin-top: 18px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .mem-label { font: 600 12px var(--mono); color: var(--secondary); width: 92px; flex: none; }
+    .mem-label small { display: block; font: 500 10.5px var(--sans); color: var(--tertiary); margin-top: 2px; }
+    .strip { display: flex; position: relative; padding-top: 16px; flex: 1; min-width: 0; }
+    .strip .cell { flex: 1 1 0; min-width: 0; max-width: 42px; height: 42px; }
+    .strip .cell + .cell { margin-left: 4px; }
+    .strip .cell.out { opacity: .32; }
+    .strip .cell .ix { position: absolute; top: -17px; left: 0; right: 0; text-align: center; font: 500 10px var(--mono); color: var(--tertiary); }
+    .strip .cell.inr { box-shadow: inset 0 0 0 2px rgba(0,113,227,.35); }
+
+    /* árvore */
+    .tree { position: relative; margin-top: 22px; overflow-x: auto; overflow-y: hidden; }
+    .tree svg { position: absolute; inset: 0; overflow: visible; pointer-events: none; }
+    .tree path { fill: none; stroke: #d1d1d6; stroke-width: 1.4; stroke-dasharray: 3 4; transition: stroke .3s; }
+    .tree path.on { stroke: #8e8e93; stroke-dasharray: none; }
+    .tree path.hot { stroke: var(--blue); stroke-width: 2; stroke-dasharray: none; }
+    .tree marker path { stroke: none; fill: #8e8e93; stroke-dasharray: none; }
+    .rowlab { position: absolute; left: 0; font: 600 11px var(--mono); color: var(--tertiary); display: flex; align-items: center; }
+    .rowlab.split { color: var(--blue); opacity: .7; }
+    .rowlab.mrg { color: var(--teal); }
+    .rowlab.base { color: var(--orange); }
+
+    .node { position: absolute; display: flex; border-radius: 9px; transition: box-shadow .3s var(--spring), opacity .3s, transform .35s var(--spring); }
+    .node .cell { border-radius: 0; }
+    .node .cell:first-child { border-top-left-radius: 9px; border-bottom-left-radius: 9px; }
+    .node .cell:last-child { border-top-right-radius: 9px; border-bottom-right-radius: 9px; }
+    .node .cell + .cell { border-left: 1px solid rgba(0,0,0,.07); }
+    .node.ghost .cell { background: transparent; box-shadow: inset 0 0 0 1.4px #d1d1d6; color: transparent; }
+    .node.ghost .cell + .cell { border-left: 1px dashed #d1d1d6; }
+    .node.ghost { box-shadow: none; }
+    .node.open .cell { background: #fff; }
+    .node.open { box-shadow: 0 0 0 1px rgba(0,0,0,.1), 0 2px 6px -2px rgba(0,0,0,.12); }
+    .node.leaf .cell { background: #fff3e0; color: #b35900; }
+    .node.leaf { box-shadow: 0 0 0 1px rgba(255,149,0,.45); }
+    .node.done .cell { background: var(--fill); color: var(--secondary); }
+    .node.done { box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
+    .node.building { box-shadow: 0 0 0 1px rgba(48,176,199,.5); }
+    .node.building .cell { background: #fff; }
+    .node.building .cell.empty { background: #f2fbfd; color: transparent; }
+    .node.merged .cell { background: #e8f8ec; color: #1a7f37; }
+    .node.merged { box-shadow: 0 0 0 1px rgba(52,199,89,.5); }
+    .node.path { box-shadow: 0 0 0 2px rgba(0,113,227,.28); }
+    .node.focus { box-shadow: 0 0 0 3px var(--blue), 0 10px 24px -8px rgba(0,113,227,.45); transform: translateY(-2px); z-index: 2; }
+    .node.focus.mfocus { box-shadow: 0 0 0 3px var(--teal), 0 10px 24px -8px rgba(48,176,199,.5); }
+    .node.final.merged .cell { background: var(--green); color: #fff; }
+
+    .cell {
+      position: relative; display: flex; align-items: center; justify-content: center;
+      background: #fff; border-radius: 10px; font: 600 15px var(--mono); color: var(--text);
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.1); transition: background .25s, color .25s, opacity .25s;
+    }
+    .node .cell { box-shadow: none; }
+    .cell.landing { color: transparent !important; }
+
+    /* ponteiros */
+    .cell.pi, .cell.pj, .cell.pk, .cell.cmp, .cell.write, .cell.take { z-index: 1; }
+    .cell.pi { background: #e5f0ff !important; color: var(--blue) !important; }
+    .cell.pj { background: #fff1db !important; color: #c46a00 !important; }
+    .cell.pk { background: #e3f6fa !important; }
+    .cell.cmp { outline: 2.5px solid currentColor; outline-offset: -2.5px; }
+    .cell.write { background: var(--teal) !important; color: #fff !important; }
+    .cell[data-tag]::after {
+      content: attr(data-tag); position: absolute; left: 50%; transform: translateX(-50%);
+      font: 700 11px var(--mono); padding: 1px 6px; border-radius: 6px; color: #fff; white-space: nowrap;
+    }
+    .cell.pi[data-tag]::after { background: var(--v-i); bottom: -20px; }
+    .cell.pj[data-tag]::after { background: var(--v-j); bottom: -20px; }
+    .cell.pk[data-tag]::after { background: var(--v-k); top: -20px; }
+    .cell.write[data-tag]::after { background: var(--v-k); top: -20px; }
+    .strip .cell.write[data-tag]::after { top: auto; bottom: -20px; }
+
+    .flyer {
+      position: fixed; z-index: 100; display: flex; align-items: center; justify-content: center;
+      border-radius: 10px; background: var(--teal); color: #fff; font: 600 15px var(--mono);
+      box-shadow: 0 12px 28px -8px rgba(0,0,0,.35); transform-origin: top left; pointer-events: none;
+    }
+
+    .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 22px; font-size: 12px; color: var(--secondary); }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .legend i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+    /* ── código ── */
+    .code { padding: 16px 0 14px; }
+    .code .card-title { padding: 0 18px; }
+    .code pre { font: 400 12.8px/1.62 var(--mono); overflow: auto; scrollbar-width: thin; font-variant-ligatures: none; }
+    .cl { display: flex; padding: 0 14px 0 0; position: relative; transition: background .2s; min-height: 1.62em; }
+    .cl .n { width: 38px; flex: none; text-align: right; padding-right: 12px; color: #c7c7cc; user-select: none; }
+    .cl .t { white-space: pre; flex: 1; }
+    .cl.active { background: #fff8d6; }
+    .cl.active::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--orange); }
+    .cl.active .n { color: var(--orange); font-weight: 600; }
+    .cl.paused { background: #f5f8ff; }
+    .cl.paused .n { color: var(--blue); }
+    .cl .ev { margin-left: 10px; font: 600 11px var(--mono); color: #fff; background: var(--text); padding: 1px 7px; border-radius: 6px; align-self: center; white-space: nowrap; }
+    .cl .ev.t { background: var(--green); }
+    .cl .ev.f { background: var(--pink); }
+    .tk-k { color: #ad3da4; font-weight: 600; }
+    .tk-f { color: #3e6fd8; }
+    .tk-n { color: #1c00cf; }
+    .tk-c { color: #8e8e93; font-style: italic; }
+    .tk-i { color: var(--v-i); font-weight: 600; }
+    .tk-j { color: #d97a00; font-weight: 600; }
+    .tk-k2 { color: #1f8ea3; font-weight: 600; }
+    .tk-m { color: var(--v-mid); font-weight: 600; }
+
+    /* ── variáveis e pilha ── */
+    .panel { padding: 16px 18px; }
+    .vars { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+    .var { background: var(--fill); border-radius: 12px; padding: 7px 10px; transition: background .3s, box-shadow .3s; }
+    .var .nm { font: 600 11px var(--mono); color: var(--secondary); }
+    .var .vl { font: 600 18px var(--mono); margin-top: 1px; }
+    .var.chg { background: #fff8d6; box-shadow: inset 0 0 0 1.5px rgba(255,149,0,.55); }
+    .var.wide { grid-column: 1 / -1; }
+    .var.v-i .nm, .var.v-i .vl { color: var(--v-i); }
+    .var.v-j .nm, .var.v-j .vl { color: #d97a00; }
+    .var.v-k .nm, .var.v-k .vl { color: #1f8ea3; }
+    .var.v-m .nm, .var.v-m .vl { color: var(--v-mid); }
+    .mini { display: flex; gap: 3px; margin-top: 5px; flex-wrap: wrap; min-height: 26px; }
+    .mini span { min-width: 30px; height: 26px; padding: 0 4px; border-radius: 7px; background: #fff; display: flex; align-items: center; justify-content: center; font: 600 12.5px var(--mono); box-shadow: inset 0 0 0 1px rgba(0,0,0,.08); color: #1f8ea3; }
+    .empty-msg { color: var(--tertiary); font-size: 13px; grid-column: 1 / -1; }
+
+    .stack { display: flex; flex-direction: column; gap: 5px; }
+    .frame { display: flex; justify-content: space-between; gap: 10px; padding: 7px 11px; border-radius: 10px; background: var(--fill); font: 500 12.5px var(--mono); color: var(--secondary); }
+    .frame.top { background: var(--text); color: #fff; }
+    .frame.top.mf { background: #1f8ea3; }
+    .frame small { font-size: 11px; opacity: .75; white-space: nowrap; }
+
+    .keys { font-size: 11.5px; color: var(--tertiary); line-height: 1.8; }
+    kbd { font: 600 11px var(--sans); background: #fff; border: 1px solid var(--hair); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--secondary); }
+
+    @media (max-width: 1060px) {
+      .main { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .main { padding: 10px 10px 20px; }
+      .stage { padding: 16px 14px 20px; }
+      .head h1 { font-size: 21px; }
+      .narr { font-size: 14.5px; }
+      .mem-label { width: auto; }
+      .mem { flex-direction: column; align-items: stretch; gap: 4px; }
+      .strip .cell { height: 34px; font-size: 12.5px; }
+      .strip .cell + .cell { margin-left: 3px; }
+      .toolbar input[type=text] { width: 150px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <button class="btn" id="bBack" title="Passo anterior (←)">← Voltar</button>
+    <button class="btn primary" id="bPlay" title="Play / pausa (Espaço)">▶ Play</button>
+    <button class="btn" id="bStep" title="Próxima linha (→)">Passo →</button>
+    <button class="btn" id="bOver" title="Executa a chamada inteira sem entrar nela (↓)">Pular chamada ⤼</button>
+    <button class="btn" id="bReset" title="Recomeçar (R)">↺</button>
+    <span class="sep"></span>
+    <label for="speed">Velocidade</label>
+    <input type="range" id="speed" min="1" max="10" value="5" />
+    <span class="sep"></span>
+    <label for="inp">nums</label>
+    <input type="text" id="inp" spellcheck="false" />
+    <button class="btn" id="bApply">Aplicar</button>
+    <select id="preset" aria-label="Exemplos">
+      <option value="">Exemplos…</option>
+      <option value="pdf">Diagrama da aula (8)</option>
+      <option value="code">Do código (5)</option>
+      <option value="rand">Aleatório (8)</option>
+      <option value="rand12">Aleatório (12)</option>
+      <option value="rev">Invertido</option>
+      <option value="sorted">Já ordenado</option>
+      <option value="dup">Com repetidos</option>
+    </select>
+    <span class="sep"></span>
+    <button class="btn on" id="bSound" title="Som (M)">Som</button>
+    <button class="btn" id="bClean" title="Ocultar controles (H)">Ocultar</button>
+    <span id="msg" class="hint"></span>
+  </div>
+
+  <div class="timeline">
+    <span id="stepLbl">0 / 0</span>
+    <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Linha do tempo" />
+  </div>
+
+  <div class="main">
+    <section class="card stage">
+      <div class="head">
+        <div>
+          <a class="back" href="laboratorio.html?algo=merge" title="Abre o Laboratório com o Merge Sort selecionado: barras, complexidade e comparação com os outros algoritmos">← Ver o Merge Sort em funcionamento no Laboratório</a>
+          <h1>Merge Sort <span>dividir, chegar no caso base e intercalar</span></h1>
+        </div>
+        <div class="stats">
+          <span>chamadas <b id="sCalls">0</b></span>
+          <span>comparações <b id="sCmp">0</b></span>
+          <span>escritas <b id="sWr">0</b></span>
+        </div>
+      </div>
+      <div class="narr"><span class="ln-tag" id="narrLn">—</span><div id="narr"></div></div>
+
+      <div class="mem">
+        <div class="mem-label">nums<small>o array de verdade</small></div>
+        <div class="strip" id="strip"></div>
+      </div>
+
+      <div class="tree" id="tree"></div>
+
+      <div class="legend">
+        <span><i style="box-shadow:inset 0 0 0 1.4px #d1d1d6"></i>ainda não chamado</span>
+        <span><i style="background:#fff;box-shadow:0 0 0 3px var(--blue)"></i>chamada atual</span>
+        <span><i style="background:#fff3e0;box-shadow:0 0 0 1px rgba(255,149,0,.6)"></i>caso base (1 elemento)</span>
+        <span><i style="background:#e5f0ff"></i>i</span>
+        <span><i style="background:#fff1db"></i>j</span>
+        <span><i style="background:var(--teal)"></i>result[k]</span>
+        <span><i style="background:#e8f8ec;box-shadow:0 0 0 1px rgba(52,199,89,.6)"></i>trecho ordenado</span>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="card code">
+        <div class="card-title"><span>Código</span><span id="fnName"></span></div>
+        <pre id="code"></pre>
+      </section>
+      <section class="card panel">
+        <div class="card-title"><span>Variáveis</span><span id="varsFn"></span></div>
+        <div class="vars" id="vars"></div>
+      </section>
+      <section class="card panel">
+        <div class="card-title"><span>Pilha de chamadas</span><span>topo ↑</span></div>
+        <div class="stack" id="stack"></div>
+      </section>
+      <div class="keys">
+        <kbd>Espaço</kbd> play/pausa · <kbd>→</kbd> passo · <kbd>←</kbd> voltar · <kbd>↓</kbd> pular chamada · <kbd>R</kbd> recomeçar · <kbd>H</kbd> ocultar controles · <kbd>M</kbd> som
+      </div>
+    </aside>
+  </div>
+
+<script>
+'use strict';
+// ─────────────────────────────────────────────────────────────
+// Código exibido (o mesmo da branch 05-Busca-Ordenacao: JS/SEARCH/merge_sort.js)
+// ─────────────────────────────────────────────────────────────
+const CODE = [
+  'const merge_sort = (nums, left, right) => {',
+  '    if (left < right) {',
+  '        let middle = Math.floor((left + right) / 2);',
+  '        merge_sort(nums, left, middle); // chamada recursiva',
+  '        merge_sort(nums, middle + 1, right);',
+  '        merge(nums, left, middle, right);',
+  '    }',
+  '    return nums;',
+  '}',
+  '',
+  'const merge = (nums, left, middle, right) => {',
+  '    const result = [];',
+  '    let length = right - left + 1;',
+  '    let i = left;',
+  '    let j = middle + 1;',
+  '    let k = 0;',
+  '',
+  '    while (i <= middle && j <= right) {',
+  '        if (nums[i] < nums[j]) {',
+  '            result[k++] = nums[i++];',
+  '        } else {',
+  '            result[k++] = nums[j++];',
+  '        }',
+  '    }',
+  '',
+  '    while (i <= middle) {',
+  '        result[k++] = nums[i++];',
+  '    }',
+  '',
+  '    while (j <= right) {',
+  '        result[k++] = nums[j++];',
+  '    }',
+  '',
+  '    for (let i = 0; i < length; i++) {',
+  '        nums[left + i] = result[i];',
+  '    }',
+  '};',
+];
+const L = { MS: 1, IF: 2, MID: 3, CALL_L: 4, CALL_R: 5, CALL_M: 6, RET: 8,
+            MG: 11, RES: 12, LEN: 13, I: 14, J: 15, K: 16, W1: 18, CMP: 19, TAKE_I: 20, TAKE_J: 22,
+            W2: 26, REST_I: 27, W3: 30, REST_J: 31, FOR: 34, COPY: 35, END: 37 };
+
+const PRESETS = {
+  pdf: [20, 9, 86, -2, 16, 13, 34, 4],
+  code: [20, 9, 86, -2, 16],
+  rev: [90, 75, 60, 45, 30, 15, 5, -5],
+  sorted: [-2, 4, 9, 13, 16, 20, 34, 86],
+  dup: [5, 3, 5, 1, 3, 8, 1],
+};
+const rand = (n) => Array.from({ length: n }, () => Math.floor(Math.random() * 120) - 20);
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const fmt = (a) => '[' + a.join(', ') + ']';
+
+// ─────────────────────────────────────────────────────────────
+// Árvore de chamadas (formato do diagrama: divide para baixo, merge de volta)
+// ─────────────────────────────────────────────────────────────
+function buildTree(n) {
+  const nodes = {}; let D = 0;
+  (function rec(l, r, d, parent) {
+    const key = l + '-' + r, leaf = l >= r, mid = Math.floor((l + r) / 2);
+    nodes[key] = { key, l, r, d, leaf, mid, parent, kids: leaf ? [] : [l + '-' + mid, (mid + 1) + '-' + r] };
+    D = Math.max(D, d);
+    if (!leaf) { rec(l, mid, d + 1, key); rec(mid + 1, r, d + 1, key); }
+  })(0, n - 1, 0, null);
+  return { nodes, D };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Execução instrumentada: cada linha executada vira um passo (snapshot completo,
+// então dá para voltar e avançar à vontade).
+// ─────────────────────────────────────────────────────────────
+function trace(input) {
+  const n = input.length, nums = input.slice();
+  const { nodes, D } = buildTree(n);
+  const T = { split: {}, merged: {} };
+  for (const k in nodes) {
+    T.split[k] = 'ghost';
+    if (!nodes[k].leaf) T.merged[k] = { vals: Array(nodes[k].r - nodes[k].l + 1).fill(null), st: 'ghost' };
+  }
+  const cloneT = () => {
+    const m = {};
+    for (const k in T.merged) m[k] = { vals: T.merged[k].vals.slice(), st: T.merged[k].st };
+    return { split: { ...T.split }, merged: m };
+  };
+  const stack = [], steps = [], stats = { calls: 0, cmp: 0, wr: 0 };
+  const top = () => stack[stack.length - 1];
+
+  function snap(line, narr, hl = {}, chg = [], snd = null) {
+    const f = top();
+    if (f) f.line = line;
+    steps.push({
+      line, narr, chg, snd,
+      fn: f ? f.fn : null,
+      hl: { ...hl, focus: f ? f.key : null, path: stack.map((s) => s.key), range: f ? [nodes[f.key].l, nodes[f.key].r] : null },
+      vars: f ? Object.entries(f.vars).map(([k, v]) => [k, Array.isArray(v) ? v.slice() : v]) : [],
+      stack: stack.map((s) => ({ label: s.label, line: s.line, fn: s.fn })),
+      nums: nums.slice(), tree: cloneT(), stats: { ...stats },
+    });
+  }
+
+  // célula da árvore que mostra nums[p] durante o merge do nó (l..r)
+  function disp(N, p) {
+    const C = nodes[p <= N.mid ? N.kids[0] : N.kids[1]];
+    return (C.leaf ? 's:' : 'm:') + C.key + ':' + (p - C.l);
+  }
+
+  function mergeSort(l, r) {
+    const key = l + '-' + r;
+    stats.calls++;
+    stack.push({ fn: 'merge_sort', key, label: `merge_sort(nums, ${l}, ${r})`, vars: { left: l, right: r }, line: L.MS });
+    T.split[key] = 'open';
+    snap(L.MS, `Entrou em <b>merge_sort(nums, ${l}, ${r})</b>: esta chamada cuida do trecho ${esc(fmt(nums.slice(l, r + 1)))}.`, {}, ['left', 'right'], 'call');
+    const c = l < r;
+    if (!c) T.split[key] = 'leaf';
+    snap(L.IF, c
+      ? `left (${l}) &lt; right (${r})? <b>Sim</b>: o trecho tem ${r - l + 1} elementos, então ainda dá para dividir.`
+      : `left (${l}) &lt; right (${r})? <b>Não</b>: sobrou um elemento só (${nums[l]}), que já está ordenado. É o <b>caso base</b> da recursão.`,
+      { ev: `${l} < ${r} → ${c}`, evc: c }, [], c ? null : 'base');
+    if (c) {
+      const m = Math.floor((l + r) / 2);
+      top().vars.middle = m;
+      snap(L.MID, `middle = ⌊(${l} + ${r}) / 2⌋ = <b>${m}</b>. Metade esquerda: índices ${l}..${m}; metade direita: ${m + 1}..${r}.`, { ev: `middle = ${m}` }, ['middle']);
+      snap(L.CALL_L, `Chama merge_sort para a <b>metade esquerda</b> (${l}..${m}). Esta chamada fica <b>pausada na pilha</b> esperando a resposta.`, { ev: `merge_sort(nums, ${l}, ${m})`, hot: [key, l + '-' + m] });
+      mergeSort(l, m);
+      snap(L.CALL_R, `A esquerda voltou ordenada. Agora chama merge_sort para a <b>metade direita</b> (${m + 1}..${r}).`, { ev: `merge_sort(nums, ${m + 1}, ${r})`, hot: [key, (m + 1) + '-' + r] });
+      mergeSort(m + 1, r);
+      snap(L.CALL_M, `As duas metades já estão ordenadas. Chama <b>merge</b> para intercalar as duas em uma só.`, { ev: `merge(nums, ${l}, ${m}, ${r})` });
+      merge(l, m, r);
+    }
+    snap(L.RET, c
+      ? `<b>return nums</b>: o trecho ${l}..${r} está ordenado. Sai da pilha e volta para quem chamou.`
+      : `<b>return nums</b>: nada a fazer com um elemento. Sai da pilha e volta para quem chamou.`, {}, [], 'ret');
+    stack.pop();
+  }
+
+  function merge(l, m, r) {
+    const key = l + '-' + r, N = nodes[key], MT = T.merged[key];
+    const f = { fn: 'merge', key, label: `merge(nums, ${l}, ${m}, ${r})`, vars: { left: l, middle: m, right: r }, line: L.MG };
+    stack.push(f);
+    let i, j, k;
+    const ptrs = () => {
+      const out = [];
+      if (i !== undefined && i <= m) out.push({ id: disp(N, i), cls: 'pi', tag: 'i' });
+      if (j !== undefined && j <= r) out.push({ id: disp(N, j), cls: 'pj', tag: 'j' });
+      if (k !== undefined && k < MT.vals.length) out.push({ id: `m:${key}:${k}`, cls: 'pk', tag: 'k' });
+      return out;
+    };
+    snap(L.MG, `Entrou em <b>merge</b>: vai intercalar ${esc(fmt(nums.slice(l, m + 1)))} e ${esc(fmt(nums.slice(m + 1, r + 1)))}. Cada lado já está ordenado.`, {}, ['left', 'middle', 'right'], 'call');
+    const result = []; f.vars.result = result; MT.st = 'building';
+    snap(L.RES, `Cria <b>result</b> vazio: é ali que a lista intercalada vai sendo montada (a linha verde de baixo).`, {}, ['result']);
+    const length = r - l + 1; f.vars.length = length;
+    snap(L.LEN, `length = ${r} − ${l} + 1 = <b>${length}</b> elementos no total.`, { ev: `length = ${length}` }, ['length']);
+    i = l; f.vars.i = i;
+    snap(L.I, `i = ${l}: aponta para o <b>início da metade esquerda</b>.`, { marks: ptrs(), ev: `i = ${i}` }, ['i']);
+    j = m + 1; f.vars.j = j;
+    snap(L.J, `j = ${m} + 1 = ${j}: aponta para o <b>início da metade direita</b>.`, { marks: ptrs(), ev: `j = ${j}` }, ['j']);
+    k = 0; f.vars.k = k;
+    snap(L.K, `k = 0: a próxima posição livre em result.`, { marks: ptrs(), ev: 'k = 0' }, ['k']);
+
+    for (;;) {
+      const c = i <= m && j <= r;
+      snap(L.W1, c
+        ? `i ≤ middle e j ≤ right: ainda há elementos <b>nas duas metades</b>, então compara.`
+        : (i > m ? `A metade esquerda acabou (i = ${i} &gt; middle = ${m}). Sai do laço.` : `A metade direita acabou (j = ${j} &gt; right = ${r}). Sai do laço.`),
+        { marks: ptrs(), ev: `${i} <= ${m} && ${j} <= ${r} → ${c}`, evc: c });
+      if (!c) break;
+      const a = nums[i], b = nums[j], lt = a < b;
+      stats.cmp++;
+      snap(L.CMP, `Compara nums[i] = <b>${a}</b> com nums[j] = <b>${b}</b>. ${a} &lt; ${b}? <b>${lt ? 'Sim' : 'Não'}</b>.`,
+        { marks: [...ptrs(), { id: disp(N, i), cls: 'cmp' }, { id: disp(N, j), cls: 'cmp' }], ev: `${a} < ${b} → ${lt}`, evc: lt }, [], 'cmp');
+      if (lt) {
+        const from = disp(N, i), to = `m:${key}:${k}`;
+        result[k] = a; MT.vals[k] = a; k++; i++; stats.wr++;
+        Object.assign(f.vars, { i, k });
+        snap(L.TAKE_I, `O <b>${a}</b> (esquerda) é o menor: vai para result[${k - 1}]. Avançam <b>i</b> → ${i} e <b>k</b> → ${k}.`,
+          { marks: ptrs(), fly: { from, to, val: a } }, ['result', 'i', 'k'], { w: a });
+      } else {
+        const from = disp(N, j), to = `m:${key}:${k}`;
+        result[k] = b; MT.vals[k] = b; k++; j++; stats.wr++;
+        Object.assign(f.vars, { j, k });
+        snap(L.TAKE_J, (a === b
+          ? `Empate! Como ${a} &lt; ${b} é falso, cai no <b>else</b> e o da direita (${b}) entra primeiro.`
+          : `Caiu no <b>else</b>: o <b>${b}</b> (direita) é o menor e vai para result[${k - 1}].`) + ` Avançam <b>j</b> → ${j} e <b>k</b> → ${k}.`,
+          { marks: ptrs(), fly: { from, to, val: b } }, ['result', 'j', 'k'], { w: b });
+      }
+    }
+    for (;;) {
+      const c = i <= m;
+      snap(L.W2, c ? `Ainda sobrou elemento na <b>metade esquerda</b> (i = ${i} ≤ ${m}). Copia o resto direto, já está em ordem.`
+                   : `Nada sobrando na esquerda (i = ${i} &gt; ${m}).`, { marks: ptrs(), ev: `${i} <= ${m} → ${c}`, evc: c });
+      if (!c) break;
+      const a = nums[i], from = disp(N, i), to = `m:${key}:${k}`;
+      result[k] = a; MT.vals[k] = a; k++; i++; stats.wr++;
+      Object.assign(f.vars, { i, k });
+      snap(L.REST_I, `Copia o <b>${a}</b> da esquerda para result[${k - 1}]. i → ${i}, k → ${k}.`, { marks: ptrs(), fly: { from, to, val: a } }, ['result', 'i', 'k'], { w: a });
+    }
+    for (;;) {
+      const c = j <= r;
+      snap(L.W3, c ? `Ainda sobrou elemento na <b>metade direita</b> (j = ${j} ≤ ${r}). Copia o resto direto.`
+                   : `Nada sobrando na direita (j = ${j} &gt; ${r}). result está completo: ${esc(fmt(result))}.`, { marks: ptrs(), ev: `${j} <= ${r} → ${c}`, evc: c });
+      if (!c) break;
+      const b = nums[j], from = disp(N, j), to = `m:${key}:${k}`;
+      result[k] = b; MT.vals[k] = b; k++; j++; stats.wr++;
+      Object.assign(f.vars, { j, k });
+      snap(L.REST_J, `Copia o <b>${b}</b> da direita para result[${k - 1}]. j → ${j}, k → ${k}.`, { marks: ptrs(), fly: { from, to, val: b } }, ['result', 'j', 'k'], { w: b });
+    }
+    // o for declara outro i (sombra o i de cima)
+    delete f.vars.i;
+    for (let t = 0; ; t++) {
+      f.vars['i (for)'] = t;
+      const c = t < length;
+      snap(L.FOR, (t === 0 ? 'Agora copia result de volta para nums. ' : '') + (c
+        ? `i = ${t} &lt; length (${length}): copia mais um.`
+        : `i = ${t} não é &lt; ${length}: terminou a cópia.`),
+        { marks: c ? [{ id: `m:${key}:${t}`, cls: 'pk', tag: 'i' }] : [], ev: `${t} < ${length} → ${c}`, evc: c }, ['i (for)']);
+      if (!c) break;
+      nums[l + t] = result[t]; stats.wr++;
+      snap(L.COPY, `nums[${l} + ${t}] = result[${t}] → <b>nums[${l + t}] = ${result[t]}</b>. O array de verdade recebe o valor no lugar certo.`,
+        { marks: [{ id: `n:${l + t}`, cls: 'write', tag: '←' }], fly: { from: `m:${key}:${t}`, to: `n:${l + t}`, val: result[t] } }, [], { w: result[t] });
+    }
+    delete f.vars['i (for)'];
+    MT.st = 'done'; T.split[key] = 'done';
+    snap(L.END, `Fim do merge: nums[${l}..${r}] agora está <b>ordenado</b>: ${esc(fmt(nums.slice(l, r + 1)))}.`, {}, [], 'done');
+    stack.pop();
+  }
+
+  snap(0, `Pronto para começar. Vamos chamar <b>merge_sort(nums, 0, ${n - 1})</b> com ${esc(fmt(input))}. Use <b>Passo →</b> para andar linha a linha.`);
+  mergeSort(0, n - 1);
+  snap(0, `<b>Fim!</b> nums = ${esc(fmt(nums))}. Foram ${stats.cmp} comparações e ${stats.calls} chamadas de merge_sort. Com n elementos são ~log₂(n) níveis de divisão e cada nível faz O(n) trabalho: <b>O(n log n)</b> em todos os casos.`, {}, [], 'end');
+  return { steps, nodes, D, n, input: input.slice() };
+}
+
+// ─────────────────────────────────────────────────────────────
+// Código: monta as linhas com realce de sintaxe
+// ─────────────────────────────────────────────────────────────
+function hlCode(src) {
+  const s = esc(src);
+  return s.replace(/(\/\/.*$)|\b(const|let|if|else|while|for|return)\b|\b(merge_sort|merge|Math\.floor)\b|\b(\d+)\b|\b(i|j|k|middle)\b/g,
+    (m, c, kw, fn, num, v) => {
+      if (c) return `<span class="tk-c">${c}</span>`;
+      if (kw) return `<span class="tk-k">${kw}</span>`;
+      if (fn) return `<span class="tk-f">${fn}</span>`;
+      if (num) return `<span class="tk-n">${num}</span>`;
+      const cls = { i: 'tk-i', j: 'tk-j', k: 'tk-k2', middle: 'tk-m' }[v];
+      return `<span class="${cls}">${v}</span>`;
+    });
+}
+const codeEl = $('code');
+codeEl.innerHTML = CODE.map((t, ix) => `<div class="cl" id="cl${ix + 1}"><span class="n">${ix + 1}</span><span class="t">${hlCode(t) || ' '}</span></div>`).join('');
+
+// ─────────────────────────────────────────────────────────────
+// Layout da árvore
+// ─────────────────────────────────────────────────────────────
+let R = null;        // resultado do trace
+let cur = 0;
+let geo = null;      // geometria atual
+
+function layout() {
+  const { nodes, D, n, input } = R;
+  const tree = $('tree');
+  const W = tree.clientWidth;
+  const showLabels = W > 560;
+  const labW = showLabels ? 92 : 0;
+  // gap entre blocos: maior nas divisões mais altas (como no diagrama)
+  const internal = Object.values(nodes).filter((N) => !N.leaf);
+  const weight = (N) => 1 + 0.7 * (D - 1 - N.d);
+  const sumW = internal.reduce((s, N) => s + weight(N), 0);
+  const G = 0.42; // gap base relativo à célula
+  let cw = Math.floor((W - labW - 4) / (n + G * sumW));
+  cw = Math.max(16, Math.min(54, cw));
+  const g = cw * G;
+  const xsAt = (d) => {
+    const xs = [];
+    for (let p = 0; p < n; p++) {
+      let off = p * cw;
+      for (const N of internal) if (N.d < d && N.mid < p) off += g * weight(N);
+      xs.push(off);
+    }
+    return xs;
+  };
+  const rowW = (xs) => xs[n - 1] + cw;
+  const maxW = rowW(xsAt(D + 1));
+  const areaW = W - labW;
+  const vgap = Math.max(26, Math.min(46, cw * 0.85));
+  const rowH = cw + vgap;
+  const rows = 2 * D + 1;
+  const rowY = (row) => 8 + row * rowH;
+  const posAt = (d) => {
+    const xs = xsAt(d);
+    const shift = labW + (areaW - rowW(xs)) / 2;
+    return xs.map((x) => x + shift);
+  };
+  const xsByDepth = [];
+  for (let d = 0; d <= D; d++) xsByDepth.push(posAt(d));
+
+  const html = [];
+  // rótulos das linhas
+  if (showLabels) {
+    for (let row = 0; row < rows; row++) {
+      const lab = row < D ? ['merge_sort', 'split'] : row === D ? ['caso base', 'base'] : ['merge', 'mrg'];
+      html.push(`<div class="rowlab ${lab[1]}" style="top:${rowY(row)}px;height:${cw}px">${lab[0]}</div>`);
+    }
+  }
+  const box = {}; // key -> {split:{x,y,w}, merged:{...}}
+  const fs = Math.max(9, Math.min(15.5, cw * 0.36));
+  for (const k in nodes) {
+    const N = nodes[k], xs = xsByDepth[N.d], len = N.r - N.l + 1;
+    const x = xs[N.l], y = rowY(N.d), w = len * cw;
+    box[k] = { split: { x, y, w } };
+    html.push(`<div class="node ghost" id="S:${k}" style="left:${x}px;top:${y}px">` +
+      Array.from({ length: len }, (_, q) => `<div class="cell" id="s:${k}:${q}" style="width:${cw}px;height:${cw}px;font-size:${fs}px">${input[N.l + q]}</div>`).join('') + '</div>');
+    if (!N.leaf) {
+      const my = rowY(2 * D - N.d);
+      box[k].merged = { x, y: my, w };
+      html.push(`<div class="node ghost${N.d === 0 ? ' final' : ''}" id="M:${k}" style="left:${x}px;top:${my}px">` +
+        Array.from({ length: len }, (_, q) => `<div class="cell empty" id="m:${k}:${q}" style="width:${cw}px;height:${cw}px;font-size:${fs}px"></div>`).join('') + '</div>');
+    }
+  }
+  // setas
+  const arrows = [];
+  const svg = [`<svg width="${W}" height="${rowY(rows - 1) + cw + 12}"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z"/></marker></defs>`];
+  const line = (x1, y1, x2, y2, id) => {
+    const my = (y1 + y2) / 2;
+    svg.push(`<path id="${id}" d="M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}" marker-end="url(#ah)"/>`);
+  };
+  for (const k in nodes) {
+    const N = nodes[k];
+    if (N.leaf) continue;
+    const P = box[k];
+    for (const ck of N.kids) {
+      const C = box[ck], CN = nodes[ck];
+      // divisão: pai → filho
+      line(P.split.x + P.split.w / 2, P.split.y + cw + 3, C.split.x + C.split.w / 2, C.split.y - 3, `as:${ck}`);
+      // merge: filho (ou caso base) → pai intercalado
+      const src = CN.leaf ? C.split : C.merged;
+      line(src.x + src.w / 2, src.y + cw + 3, P.merged.x + P.merged.w / 2 + (ck === N.kids[0] ? -cw * 0.3 : cw * 0.3), P.merged.y - 3, `am:${ck}`);
+      arrows.push(ck);
+    }
+  }
+  svg.push('</svg>');
+  tree.style.height = (rowY(rows - 1) + cw + 30) + 'px';
+  tree.innerHTML = svg.join('') + html.join('');
+  geo = { cw, arrows };
+
+  // faixa do array real
+  $('strip').innerHTML = input.map((v, p) => `<div class="cell" id="n:${p}"><span class="ix">${p}</span><span class="v">${v}</span></div>`).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// Desenha um passo
+// ─────────────────────────────────────────────────────────────
+let flights = [];
+function clearFlights() { flights.forEach((f) => { f.g.remove(); f.b && f.b.classList.remove('landing'); }); flights = []; }
+
+function fly(fromId, toId, val, dur) {
+  const a = document.getElementById(fromId), b = document.getElementById(toId);
+  if (!a || !b || dur < 60) return;
+  const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
+  const g = document.createElement('div');
+  g.className = 'flyer'; g.textContent = val;
+  Object.assign(g.style, { left: ra.left + 'px', top: ra.top + 'px', width: ra.width + 'px', height: ra.height + 'px', fontSize: getComputedStyle(a).fontSize });
+  document.body.appendChild(g);
+  const dx = rb.left - ra.left, dy = rb.top - ra.top, sx = rb.width / ra.width, sy = rb.height / ra.height;
+  const lift = -Math.min(70, 24 + Math.abs(dx) * 0.18);
+  b.classList.add('landing');
+  const rec = { g, b };
+  flights.push(rec);
+  const an = g.animate([
+    { transform: 'translate(0,0) scale(1)' },
+    { transform: `translate(${dx * 0.5}px, ${dy * 0.5 + lift}px) scale(${(1 + sx) / 2 * 1.1}, ${(1 + sy) / 2 * 1.1})`, offset: 0.5 },
+    { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+  ], { duration: dur, easing: 'cubic-bezier(.45,.05,.35,1)' });
+  an.onfinish = () => { g.remove(); b.classList.remove('landing'); flights = flights.filter((f) => f !== rec); };
+}
+
+const VARCLS = { i: 'v-i', 'i (for)': 'v-i', j: 'v-j', k: 'v-k', middle: 'v-m', result: 'v-k' };
+
+function render(animate) {
+  const s = R.steps[cur];
+  clearFlights();
+
+  // narração
+  $('narr').innerHTML = s.narr;
+  $('narrLn').textContent = s.line ? `linha ${s.line}` : (cur === 0 ? 'início' : 'fim');
+
+  // código
+  codeEl.querySelectorAll('.cl.active, .cl.paused').forEach((el) => { el.classList.remove('active', 'paused'); const e = el.querySelector('.ev'); if (e) e.remove(); });
+  s.stack.slice(0, -1).forEach((fr) => { const el = $('cl' + fr.line); if (el) el.classList.add('paused'); });
+  if (s.line) {
+    const el = $('cl' + s.line);
+    el.classList.remove('paused');
+    el.classList.add('active');
+    if (s.hl.ev) {
+      const e = document.createElement('span');
+      e.className = 'ev' + (s.hl.evc === true ? ' t' : s.hl.evc === false ? ' f' : '');
+      e.textContent = s.hl.ev;
+      el.appendChild(e);
+    }
+    const pr = codeEl.getBoundingClientRect(), lr = el.getBoundingClientRect();
+    if (lr.top < pr.top + 20 || lr.bottom > pr.bottom - 20) codeEl.scrollTop += (lr.top - pr.top) - pr.height / 2;
+  }
+  $('fnName').textContent = s.fn ? s.fn + '()' : '';
+
+  // variáveis
+  $('varsFn').textContent = s.fn ? s.stack[s.stack.length - 1].label : '';
+  $('vars').innerHTML = s.vars.length ? s.vars.map(([k, v]) => {
+    const cls = ['var', VARCLS[k] || '', s.chg.includes(k) ? 'chg' : '', Array.isArray(v) ? 'wide' : ''].join(' ');
+    const val = Array.isArray(v)
+      ? `<div class="mini">${v.length ? v.map((x) => `<span>${x}</span>`).join('') : '<span style="color:var(--tertiary)">[ ]</span>'}</div>`
+      : `<div class="vl">${v}</div>`;
+    return `<div class="${cls}"><div class="nm">${k}</div>${val}</div>`;
+  }).join('') : '<div class="empty-msg">Nenhuma função rodando.</div>';
+
+  // pilha
+  $('stack').innerHTML = s.stack.length ? s.stack.slice().reverse().map((fr, ix) =>
+    `<div class="frame${ix === 0 ? ' top' : ''}${ix === 0 && fr.fn === 'merge' ? ' mf' : ''}"><span>${fr.label}</span><small>${ix === 0 ? 'rodando · ' : 'pausada · '}linha ${fr.line}</small></div>`).join('')
+    : '<div class="empty-msg">Pilha vazia.</div>';
+
+  // estatísticas e linha do tempo
+  $('sCalls').textContent = s.stats.calls; $('sCmp').textContent = s.stats.cmp; $('sWr').textContent = s.stats.wr;
+  $('scrub').value = cur; $('stepLbl').textContent = `${cur} / ${R.steps.length - 1}`;
+
+  // array real
+  const [rl, rr] = s.hl.range || [-1, -1];
+  s.nums.forEach((v, p) => {
+    const c = $('n:' + p);
+    c.className = 'cell' + (s.hl.range && (p < rl || p > rr) ? ' out' : '') + (s.hl.range && p >= rl && p <= rr ? ' inr' : '');
+    c.removeAttribute('data-tag');
+    c.querySelector('.v').textContent = v;
+  });
+
+  // árvore
+  const { nodes } = R;
+  for (const k in nodes) {
+    const N = nodes[k], st = s.tree.split[k];
+    const S = $('S:' + k);
+    S.className = 'node ' + st + (s.hl.path.includes(k) ? ' path' : '');
+    S.querySelectorAll('.cell').forEach((c) => { c.className = 'cell'; c.removeAttribute('data-tag'); });
+    if (!N.leaf) {
+      const MT = s.tree.merged[k], M = $('M:' + k);
+      const full = MT.st === 'done';
+      M.className = 'node ' + (MT.st === 'ghost' ? 'ghost' : full ? 'merged' : 'building') + (N.d === 0 ? ' final' : '');
+      M.querySelectorAll('.cell').forEach((c, q) => {
+        const v = MT.vals[q];
+        c.className = 'cell' + (v === null ? ' empty' : '');
+        c.removeAttribute('data-tag');
+        c.textContent = v === null ? '' : v;
+      });
+    }
+  }
+  if (s.hl.focus) {
+    const isM = s.fn === 'merge';
+    const el = $((isM ? 'M:' : 'S:') + s.hl.focus);
+    if (el) el.classList.add('focus', ...(isM ? ['mfocus'] : []));
+  }
+  // setas
+  for (const ck of geo.arrows) {
+    const CN = nodes[ck];
+    const as = $('as:' + ck), am = $('am:' + ck);
+    as.setAttribute('class', s.tree.split[ck] !== 'ghost' ? 'on' : '');
+    am.setAttribute('class', s.tree.merged[CN.parent].st !== 'ghost' ? 'on' : '');
+  }
+  if (s.hl.hot) { const a = $('as:' + s.hl.hot[1]); if (a) a.setAttribute('class', 'hot'); }
+  // ponteiros
+  (s.hl.marks || []).forEach((m) => {
+    const c = document.getElementById(m.id);
+    if (!c) return;
+    c.classList.add(m.cls);
+    if (m.tag) c.setAttribute('data-tag', c.dataset.tag && c.dataset.tag !== m.tag ? c.dataset.tag + ' ' + m.tag : m.tag);
+  });
+
+  if (animate && s.hl.fly) fly(s.hl.fly.from, s.hl.fly.to, s.hl.fly.val, Math.min(620, delay() * 0.85));
+  if (animate) sound(s);
+
+  $('bBack').disabled = cur === 0;
+  $('bStep').disabled = $('bOver').disabled = cur >= R.steps.length - 1;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Som (Web Audio, sem arquivos)
+// ─────────────────────────────────────────────────────────────
+let ac = null, soundOn = true;
+function tone(f, dur = 0.12, vol = 0.07, type = 'sine') {
+  if (!soundOn) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.005); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + dur + 0.02);
+  } catch (e) { /* sem áudio */ }
+}
+function sound(s) {
+  const sn = s.snd;
+  if (!sn) return;
+  if (sn === 'call') tone(520, 0.08, 0.05, 'triangle');
+  else if (sn === 'ret') tone(390, 0.08, 0.04, 'triangle');
+  else if (sn === 'base') tone(660, 0.14, 0.05);
+  else if (sn === 'cmp') tone(1200, 0.04, 0.035, 'square');
+  else if (sn === 'done') { tone(660, 0.12, 0.05); setTimeout(() => tone(880, 0.16, 0.05), 90); }
+  else if (sn === 'end') [523, 659, 784, 1047].forEach((f, ix) => setTimeout(() => tone(f, 0.22, 0.06), ix * 110));
+  else if (sn.w !== undefined) {
+    const vals = R.input.slice().sort((a, b) => a - b);
+    const rank = vals.indexOf(sn.w) / Math.max(1, vals.length - 1);
+    tone(330 * Math.pow(2, rank * 1.5), 0.13, 0.06);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Controles
+// ─────────────────────────────────────────────────────────────
+let timer = null;
+const delay = () => Math.round(1500 * Math.pow(0.66, +$('speed').value - 1));
+function go(ix, animate = true) { cur = Math.max(0, Math.min(R.steps.length - 1, ix)); render(animate); }
+function step() { if (cur < R.steps.length - 1) go(cur + 1); else pause(); }
+function back() { pause(); go(cur - 1, false); }
+function over() {
+  pause();
+  const d = R.steps[cur].stack.length;
+  let ix = cur + 1;
+  while (ix < R.steps.length - 1 && R.steps[ix].stack.length > d) ix++;
+  go(ix, false);
+}
+function play() {
+  if (cur >= R.steps.length - 1) go(0, false);
+  $('bPlay').textContent = '❚❚ Pausa';
+  const tick = () => { step(); if (cur < R.steps.length - 1) timer = setTimeout(tick, delay()); else pause(); };
+  timer = setTimeout(tick, 120);
+}
+function pause() { clearTimeout(timer); timer = null; $('bPlay').textContent = '▶ Play'; }
+function toggle() { timer ? pause() : play(); }
+
+function load(arr) {
+  pause();
+  R = trace(arr);
+  $('inp').value = arr.join(', ');
+  $('scrub').max = R.steps.length - 1;
+  layout();
+  go(0, false);
+}
+
+function applyInput() {
+  const raw = $('inp').value.split(/[\s,;]+/).filter(Boolean).map(Number);
+  const msg = $('msg');
+  if (raw.some((x) => !Number.isFinite(x))) { msg.className = 'err'; msg.textContent = 'Use só números separados por vírgula.'; $('inp').classList.add('bad'); return; }
+  if (raw.length < 2 || raw.length > 12) { msg.className = 'err'; msg.textContent = 'Use de 2 a 12 números.'; $('inp').classList.add('bad'); return; }
+  $('inp').classList.remove('bad'); msg.className = 'hint'; msg.textContent = '';
+  load(raw.map((x) => Math.round(x)));
+}
+
+$('bPlay').onclick = toggle;
+$('bStep').onclick = () => { pause(); step(); };
+$('bBack').onclick = back;
+$('bOver').onclick = over;
+$('bReset').onclick = () => { pause(); go(0, false); };
+$('bApply').onclick = applyInput;
+$('inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyInput(); });
+$('preset').onchange = (e) => {
+  const v = e.target.value; e.target.value = '';
+  if (!v) return;
+  load(v === 'rand' ? rand(8) : v === 'rand12' ? rand(12) : PRESETS[v]);
+};
+$('scrub').oninput = (e) => { pause(); go(+e.target.value, false); };
+$('bSound').onclick = () => { soundOn = !soundOn; $('bSound').classList.toggle('on', soundOn); };
+$('bClean').onclick = () => document.body.classList.toggle('clean');
+
+document.addEventListener('keydown', (e) => {
+  if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName) && e.target.type !== 'range') return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.code === 'Space') { e.preventDefault(); toggle(); }
+  else if (e.code === 'ArrowRight') { e.preventDefault(); pause(); step(); }
+  else if (e.code === 'ArrowLeft') { e.preventDefault(); back(); }
+  else if (e.code === 'ArrowDown') { e.preventDefault(); over(); }
+  else if (e.key === 'r' || e.key === 'R') { pause(); go(0, false); }
+  else if (e.key === 'h' || e.key === 'H') document.body.classList.toggle('clean');
+  else if (e.key === 'm' || e.key === 'M') $('bSound').click();
+});
+
+let rw = 0;
+new ResizeObserver(() => {
+  const w = $('tree').clientWidth;
+  if (R && Math.abs(w - rw) > 2) { rw = w; layout(); render(false); }
+}).observe($('tree'));
+
+// no repositório o laboratório se chama sort-lab.html; publicado vira laboratorio.html
+if (/\/JS\/SEARCH\//.test(location.pathname)) document.querySelector('.back').href = 'sort-lab.html?algo=merge';
+
+load(PRESETS.pdf);
+</script>
+</body>
+</html>
